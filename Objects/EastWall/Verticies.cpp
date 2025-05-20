@@ -1,4 +1,5 @@
 #include "Verticies.hpp"
+#include "../Vertex.hpp"
 
 // A flat quad for glass centered on origin
 std::vector<Vertex> glassVertices = {

@@ -11,6 +11,7 @@
 
 #include "shader.hpp"
 #include "Objects/EastWall/WindowWall.hpp"
+#include "Objects/WestWall/Wall.hpp"
 
 using namespace glm;
 using namespace std;
@@ -100,6 +101,7 @@ int main()
 
     // Build scene
     WindowWall wall(8,8,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
+    Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
 
     // Optional: wireframe for debugging
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -112,7 +114,8 @@ int main()
         glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        wall.draw(view, projection, shaderProgram);
+        //wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
+        westWall.draw(view, projection, shaderProgram);
 
         glfwSwapBuffers(window);
     }
