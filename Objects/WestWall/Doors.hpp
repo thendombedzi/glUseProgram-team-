@@ -2,14 +2,18 @@
 #define DOORS_HPP
 
 #include <GL/glew.h>
-#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include "../Vertex.hpp"
 #include <vector>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include "../Vertex.hpp"
 
 class Doors {
 	public:
-	std::vector<Vertex> createDualDoors(float wallWidth, float wallHeight,float doorWidth, float doorHeight,float windowStackXOffset, float zOffset);
+	std::vector<Vertex> createDoor(float x, float y, float width, float height, float zOffset = 0.11f);
+	std::vector<Vertex> createUpperPartOfDoor(float x, float yAboveDoor, float width, float height, float zOffset = 0.11f);
+	std::vector<Vertex> createWindowOnDoor(float x, float y, float width, float height, float zOffset = 0.12f);
 };
+
 
 #endif

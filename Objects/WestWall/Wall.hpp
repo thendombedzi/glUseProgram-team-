@@ -9,7 +9,6 @@
 class Wall {
 public:
     Wall(float width, float height, float depth, int grooveCols, int grooveRows);
-
     void setTransform(const glm::mat4& model);
     void draw(const glm::mat4& view, const glm::mat4& projection, GLuint shader);
 

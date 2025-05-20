@@ -114,8 +114,8 @@ int main()
         glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        //wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
-        westWall.draw(view, projection, shaderProgram);
+        wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
+        //westWall.draw(view, projection, shaderProgram);
 
         glfwSwapBuffers(window);
     }
