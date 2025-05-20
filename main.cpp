@@ -176,7 +176,7 @@ int main()
     glEnable(GL_DEPTH_TEST);
 
     // Load shaders
-    shaderProgram = LoadShaders("vertex.glsl", "fragment.glsl");
+    shaderProgram = LoadShaders("vertex_shader.glsl", "fragment_shader.glsl");
 
     // Set camera
     view = glm::lookAt(
