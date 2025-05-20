@@ -1,0 +1,10 @@
+#version 330 core
+
+//in vec4 fragmentColor;
+out vec4 color;
+uniform vec4 objectColor;
+
+void main() 
+{
+    color = objectColor;
+}
