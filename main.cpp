@@ -20,34 +20,35 @@ using namespace std;
 GLuint shaderProgram;
 glm::mat4 view, projection;
 
-const char *getError()
-{
+// Define MaterialGroup at global scope before using it
+struct MaterialGroup {
+    GLuint VAO, VBO;
+    GLsizei vertexCount;
+    glm::vec3 color;
+};
+
+const char *getError() {
     const char *errorDescription;
     glfwGetError(&errorDescription);
     return errorDescription;
 }
 
-inline void startUpGLFW()
-{
+inline void startUpGLFW() {
     glewExperimental = true; // Needed for core profile
-    if (!glfwInit())
-    {
+    if (!glfwInit()) {
         throw getError();
     }
 }
 
-inline void startUpGLEW()
-{
+inline void startUpGLEW() {
     glewExperimental = true; // Needed in core profile
-    if (glewInit() != GLEW_OK)
-    {
+    if (glewInit() != GLEW_OK) {
         glfwTerminate();
         throw getError();
     }
 }
 
-inline GLFWwindow *setUp()
-{
+inline GLFWwindow *setUp() {
     startUpGLFW();
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -55,9 +56,8 @@ inline GLFWwindow *setUp()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow *window = glfwCreateWindow(1400, 1000, "glUseProgram(team)", NULL, NULL);
-    if (window == NULL)
-    {
+    GLFWwindow *window = glfwCreateWindow(1400, 1000, "Room Furniture Layout", NULL, NULL);
+    if (window == NULL) {
         cout << getError() << endl;
         glfwTerminate();
         throw "Failed to open GLFW window.";
@@ -68,29 +68,110 @@ inline GLFWwindow *setUp()
     return window;
 }
 
-int main()
-{
-    GLFWwindow *window;
-    try
-    {
-        window = setUp();
+// Function to load object files and create material groups
+std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyobj::ObjReaderConfig& config) {
+    tinyobj::ObjReader reader;
+    if (!reader.ParseFromFile(filename, config)) {
+        std::cerr << "TinyObjReader failed to load " << filename << ": " << reader.Error() << std::endl;
+        return {};
     }
-    catch (const char *e)
-    {
+    if (!reader.Warning().empty()) {
+        std::cout << "TinyObjReader warning (" << filename << "): " << reader.Warning() << std::endl;
+    }
+    
+    const tinyobj::attrib_t &attrib = reader.GetAttrib();
+    const std::vector<tinyobj::shape_t> &shapes = reader.GetShapes();
+    const std::vector<tinyobj::material_t> &materials = reader.GetMaterials();
+    
+    std::vector<MaterialGroup> materialGroups;
+    
+    for (size_t s = 0; s < shapes.size(); ++s) {
+        const auto& shape = shapes[s];
+        std::unordered_map<int, std::vector<float>> materialVertexMap;
+        
+        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
+            int mat_id = shape.mesh.material_ids[f];
+            int fv = shape.mesh.num_face_vertices[f];
+            
+            for (size_t v = 0; v < fv; ++v) {
+                tinyobj::index_t idx = shape.mesh.indices[f * fv + v];
+                materialVertexMap[mat_id].insert(materialVertexMap[mat_id].end(), {
+                    attrib.vertices[3 * idx.vertex_index + 0],
+                    attrib.vertices[3 * idx.vertex_index + 1],
+                    attrib.vertices[3 * idx.vertex_index + 2]
+                });
+            }
+        }
+        
+        for (const auto& [mat_id, verts] : materialVertexMap) {
+            GLuint VAO, VBO;
+            glGenVertexArrays(1, &VAO);
+            glGenBuffers(1, &VBO);
+            glBindVertexArray(VAO);
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+            glEnableVertexAttribArray(0);
+            
+            glm::vec3 color(0.8f);
+            if (mat_id >= 0 && mat_id < (int)materials.size()) {
+                color = glm::vec3(materials[mat_id].diffuse[0], materials[mat_id].diffuse[1], materials[mat_id].diffuse[2]);
+            }
+            
+            materialGroups.push_back({VAO, VBO, static_cast<GLsizei>(verts.size() / 3), color});
+        }
+    }
+    
+    return materialGroups;
+}
+
+// Structure to manage furniture with position, rotation, and scale
+struct Furniture {
+    std::vector<MaterialGroup> materialGroups;
+    glm::vec3 position;
+    glm::vec3 rotation; // in degrees
+    glm::vec3 scale;
+    
+    void render(GLuint shaderProgram) const {
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, position);
+        model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        model = glm::scale(model, scale);
+        
+        GLuint modelLoc = glGetUniformLocation(shaderProgram, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        
+        for (const auto& group : materialGroups) {
+            GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+            glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+            glBindVertexArray(group.VAO);
+            glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+        }
+    }
+};
+
+int main() {
+    GLFWwindow *window;
+    try {
+        window = setUp();
+    } catch (const char *e) {
         cout << e << endl;
         return -1;
     }
 
-    // Enable depth testing
+    // Enable depth testing and disable face culling
     glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
 
-    // Load shaders
+    // Load shaders (assuming "vertex_shader.glsl" and "fragment_shader.glsl" are correct for both objects)
     shaderProgram = LoadShaders("vertexShader.glsl", "fragmentShader.glsl");
 
-    // Set camera
+    // Set camera to view the entire room and furniture
     view = glm::lookAt(
-        glm::vec3(10.0f, 3.0f, 0.0f), 
-        glm::vec3(0.0f, -1.0f, 0.0f),   
+        glm::vec3(20.0f, 15.0f, 20.0f), // Position further back and higher to see full room
+        glm::vec3(0.0f, 0.0f, 0.0f),    // Look at the origin
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
 
@@ -101,118 +182,308 @@ int main()
 
     tinyobj::ObjReaderConfig reader_config;
     reader_config.triangulate = true;
+    
+    // Create a collection of furniture
+    std::vector<Furniture> furnitureCollection;
+    float groundLevel = 0.0f; // Set the common ground level for all furniture
+    
+    // 1-2. Loading Blue Carpet (2 instances)
+    auto blue_materialGroups = loadObjModel("Objects/blue.obj", reader_config);
+    if (!blue_materialGroups.empty()) {
+        // First blue carpet
+        furnitureCollection.push_back({
+            blue_materialGroups,
+            glm::vec3(-5.0f, groundLevel, 0.0f), // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                      // Scale
+        });
+        
+        // Second blue carpet
+        furnitureCollection.push_back({
+            blue_materialGroups,
+            glm::vec3(5.0f, groundLevel, 3.0f),  // Position
+            glm::vec3(0.0f, 45.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                      // Scale
+        });
+    }
+    
+    // 3-4. Loading Yellow (2 instances)
+    auto yellow_materialGroups = loadObjModel("Objects/yellow.obj", reader_config);
+    if (!yellow_materialGroups.empty()) {
+        // First yellow
+        furnitureCollection.push_back({
+            yellow_materialGroups,
+            glm::vec3(-3.0f, groundLevel, -6.0f), // Position
+            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Second yellow
+        furnitureCollection.push_back({
+            yellow_materialGroups,
+            glm::vec3(7.0f, groundLevel, -4.0f),  // Position
+            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+    }
+    
+    // 5-7. Loading LCouch (3 instances - 2 connected, 1 separate)
+    auto lcouch_materialGroups = loadObjModel("Objects/Lcouch.obj", reader_config);
+    if (!lcouch_materialGroups.empty()) {
+        // First LCouch (part of connected pair)
+        furnitureCollection.push_back({
+            lcouch_materialGroups,
+            glm::vec3(-8.0f, groundLevel, -8.0f), // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Second LCouch (connected to first)
+        furnitureCollection.push_back({
+            lcouch_materialGroups,
+            glm::vec3(-8.0f, groundLevel, -4.5f), // Position
+            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Third LCouch (separate)
+        furnitureCollection.push_back({
+            lcouch_materialGroups,
+            glm::vec3(8.0f, groundLevel, 8.0f),    // Position
+            glm::vec3(0.0f, 135.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                        // Scale
+        });
+    }
+    
+    // 8-12. Loading Ornaments (5 instances)
+    auto ornament_materialGroups = loadObjModel("Objects/Ornament.obj", reader_config);
+    if (!ornament_materialGroups.empty()) {
+        // Ornament 1
+        furnitureCollection.push_back({
+            ornament_materialGroups,
+            glm::vec3(-6.0f, groundLevel, 6.0f),  // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Ornament 2
+        furnitureCollection.push_back({
+            ornament_materialGroups,
+            glm::vec3(6.0f, groundLevel, -6.0f),  // Position
+            glm::vec3(0.0f, 45.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Ornament 3
+        furnitureCollection.push_back({
+            ornament_materialGroups,
+            glm::vec3(0.0f, groundLevel, 8.0f),    // Position
+            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Ornament 4
+        furnitureCollection.push_back({
+            ornament_materialGroups,
+            glm::vec3(-4.0f, groundLevel, -3.0f), // Position
+            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Ornament 5
+        furnitureCollection.push_back({
+            ornament_materialGroups,
+            glm::vec3(3.0f, groundLevel, 0.0f),    // Position
+            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+    }
+    
+    // 13-14. Loading Dividers (2 instances)
+    auto divider_materialGroups = loadObjModel("Objects/divider.obj", reader_config);
+    if (!divider_materialGroups.empty()) {
+        // Divider 1
+        furnitureCollection.push_back({
+            divider_materialGroups,
+            glm::vec3(0.0f, groundLevel, -9.0f),  // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Divider 2
+        furnitureCollection.push_back({
+            divider_materialGroups,
+            glm::vec3(-9.0f, groundLevel, 0.0f),  // Position
+            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+    }
+    
+    // 15-16. Loading CubicCouch (2 instances)
+    auto cubicCouch_materialGroups = loadObjModel("Objects/cubicCouch.obj", reader_config);
+    if (!cubicCouch_materialGroups.empty()) {
+        // First CubicCouch 
+        furnitureCollection.push_back({
+            cubicCouch_materialGroups,
+            glm::vec3(-2.0f, groundLevel, 3.0f),  // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Second CubicCouch
+        furnitureCollection.push_back({
+            cubicCouch_materialGroups,
+            glm::vec3(4.0f, groundLevel, -8.0f),  // Position
+            glm::vec3(0.0f, 30.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+    }
+    
+    // 17-20. Loading Small Tables (4 instances)
+    auto smallTable_materialGroups = loadObjModel("Objects/smallTable.obj", reader_config);
+    if (!smallTable_materialGroups.empty()) {
+        // Small Table 1
+        furnitureCollection.push_back({
+            smallTable_materialGroups,
+            glm::vec3(-4.0f, groundLevel, 8.0f),  // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Small Table 2
+        furnitureCollection.push_back({
+            smallTable_materialGroups,
+            glm::vec3(4.0f, groundLevel, 6.0f),    // Position
+            glm::vec3(0.0f, 45.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Small Table 3
+        furnitureCollection.push_back({
+            smallTable_materialGroups,
+            glm::vec3(-6.0f, groundLevel, -5.0f), // Position
+            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Small Table 4
+        furnitureCollection.push_back({
+            smallTable_materialGroups,
+            glm::vec3(2.0f, groundLevel, -3.0f),  // Position
+            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+    }
+    
+    // 21-24. Loading Tall Tables (4 instances - 2 pairs that are close to each other)
+    auto tallTable_materialGroups = loadObjModel("Objects/tallTable.obj", reader_config);
+    if (!tallTable_materialGroups.empty()) {
+        // Tall Table 1 (pair 1)
+        furnitureCollection.push_back({
+            tallTable_materialGroups,
+            glm::vec3(-7.0f, groundLevel, 3.0f),  // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Tall Table 2 (pair 1)
+        furnitureCollection.push_back({
+            tallTable_materialGroups,
+            glm::vec3(-7.0f, groundLevel, 5.0f),  // Position
+            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Tall Table 3 (pair 2)
+        furnitureCollection.push_back({
+            tallTable_materialGroups,
+            glm::vec3(7.0f, groundLevel, -7.0f),  // Position
+            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Tall Table 4 (pair 2)
+        furnitureCollection.push_back({
+            tallTable_materialGroups,
+            glm::vec3(9.0f, groundLevel, -7.0f),  // Position
+            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+    }
+    
+    // 25-26. Loading Short Tables (2 instances)
+    auto shortTable_materialGroups = loadObjModel("Objects/shortTable.obj", reader_config);
+    if (!shortTable_materialGroups.empty()) {
+        // Short Table 1
+        furnitureCollection.push_back({
+            shortTable_materialGroups,
+            glm::vec3(0.0f, groundLevel, 4.0f),    // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Short Table 2
+        furnitureCollection.push_back({
+            shortTable_materialGroups,
+            glm::vec3(2.0f, groundLevel, -7.0f),  // Position
+            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+    }
+    
+    // 27-30. Loading Comfortable Chairs (4 instances)
+    auto comfortableChair_materialGroups = loadObjModel("Objects/comfortableChair.obj", reader_config);
+    if (!comfortableChair_materialGroups.empty()) {
+        // Near Short Table 1
+        // Chair 1
+        furnitureCollection.push_back({
+            comfortableChair_materialGroups,
+            glm::vec3(-1.0f, groundLevel, 3.0f),  // Position
+            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Chair 2
+        furnitureCollection.push_back({
+            comfortableChair_materialGroups,
+            glm::vec3(1.0f, groundLevel, 3.0f),    // Position
+            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Near Short Table 2
+        // Chair 3
+        furnitureCollection.push_back({
+            comfortableChair_materialGroups,
+            glm::vec3(1.0f, groundLevel, -8.0f),  // Position
+            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Chair 4
+        furnitureCollection.push_back({
+            comfortableChair_materialGroups,
+            glm::vec3(3.0f, groundLevel, -8.0f),  // Position
+            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+    }
 
-    // Load Carpet
-    tinyobj::ObjReader carpet_reader;
-    std::string carpet_file = "carpet_1.obj"; // Adjust path
-    if (!carpet_reader.ParseFromFile(carpet_file, reader_config)) {
-        std::cerr << "TinyObjReader failed to load " << carpet_file << ": " << carpet_reader.Error() << std::endl;
-        return -1;
-    }
-    if (!carpet_reader.Warning().empty()) {
-        std::cout << "TinyObjReader warning (carpet): " << carpet_reader.Warning() << std::endl;
-    }
-    const tinyobj::attrib_t &carpet_attrib = carpet_reader.GetAttrib();
-    const std::vector<tinyobj::shape_t> &carpet_shapes = carpet_reader.GetShapes();
-    const std::vector<tinyobj::material_t> &carpet_materials = carpet_reader.GetMaterials();
+    // --- Load Room Components ---
+    // Load Carpet (ground)
+    std::vector<MaterialGroup> carpet_materialGroups = loadObjModel("carpet_1.obj", reader_config);
 
     // Load Roof
-    tinyobj::ObjReader roof_reader;
-    std::string roof_file = "alt_panels.obj"; // Adjust path
-    if (!roof_reader.ParseFromFile(roof_file, reader_config)) {
-        std::cerr << "TinyObjReader failed to load " << roof_file << ": " << roof_reader.Error() << std::endl;
-        return -1;
-    }
-    if (!roof_reader.Warning().empty()) {
-        std::cout << "TinyObjReader warning (roof): " << roof_reader.Warning() << std::endl;
-    }
-    const tinyobj::attrib_t &roof_attrib = roof_reader.GetAttrib();
-    const std::vector<tinyobj::shape_t> &roof_shapes = roof_reader.GetShapes();
-    const std::vector<tinyobj::material_t> &roof_materials = roof_reader.GetMaterials();
+    std::vector<MaterialGroup> roof_materialGroups = loadObjModel("alt_panels.obj", reader_config);
 
-    // 2. Prepare VAOs/VBOs per shape, with material color
-    struct MaterialGroup {
-        GLuint VAO, VBO;
-        GLsizei vertexCount;
-        glm::vec3 color;
-    };
-
-    // Prepare VAOs/VBOs for Carpet
-    std::vector<MaterialGroup> carpet_materialGroups;
-    for (size_t s = 0; s < carpet_shapes.size(); ++s) {
-        // ... (rest of the VAO/VBO generation code for carpet, similar to what you had) ...
-        const auto& shape = carpet_shapes[s];
-        std::unordered_map<int, std::vector<float>> materialVertexMap;
-        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
-            int mat_id = shape.mesh.material_ids[f];
-            int fv = shape.mesh.num_face_vertices[f];
-            for (size_t v = 0; v < fv; ++v) {
-                tinyobj::index_t idx = shape.mesh.indices[f * fv + v];
-                materialVertexMap[mat_id].insert(materialVertexMap[mat_id].end(), {
-                    carpet_attrib.vertices[3 * idx.vertex_index + 0],
-                    carpet_attrib.vertices[3 * idx.vertex_index + 1],
-                    carpet_attrib.vertices[3 * idx.vertex_index + 2]
-                });
-            }
-        }
-        for (const auto& [mat_id, verts] : materialVertexMap) {
-            GLuint VAO, VBO;
-            glGenVertexArrays(1, &VAO);
-            glGenBuffers(1, &VBO);
-            glBindVertexArray(VAO);
-            glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-            glEnableVertexAttribArray(0);
-            glm::vec3 color(0.8f);
-            if (mat_id >= 0 && mat_id < (int)carpet_materials.size()) {
-                color = glm::vec3(carpet_materials[mat_id].diffuse[0], carpet_materials[mat_id].diffuse[1], carpet_materials[mat_id].diffuse[2]);
-            }
-            carpet_materialGroups.push_back({VAO, VBO, static_cast<GLsizei>(verts.size() / 3), color});
-        }
-    }
-
-    // Prepare VAOs/VBOs for Roof
-    std::vector<MaterialGroup> roof_materialGroups;
-    for (size_t s = 0; s < roof_shapes.size(); ++s) {
-        // ... (rest of the VAO/VBO generation code for roof, similar to carpet) ...
-        const auto& shape = roof_shapes[s];
-        std::unordered_map<int, std::vector<float>> materialVertexMap;
-        for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
-            int mat_id = shape.mesh.material_ids[f];
-            int fv = shape.mesh.num_face_vertices[f];
-            for (size_t v = 0; v < fv; ++v) {
-                tinyobj::index_t idx = shape.mesh.indices[f * fv + v];
-                materialVertexMap[mat_id].insert(materialVertexMap[mat_id].end(), {
-                    roof_attrib.vertices[3 * idx.vertex_index + 0],
-                    roof_attrib.vertices[3 * idx.vertex_index + 1],
-                    roof_attrib.vertices[3 * idx.vertex_index + 2]
-                });
-            }
-        }
-        for (const auto& [mat_id, verts] : materialVertexMap) {
-            GLuint VAO, VBO;
-            glGenVertexArrays(1, &VAO);
-            glGenBuffers(1, &VBO);
-            glBindVertexArray(VAO);
-            glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-            glEnableVertexAttribArray(0);
-            glm::vec3 color(0.8f);
-            if (mat_id >= 0 && mat_id < (int)roof_materials.size()) {
-                color = glm::vec3(roof_materials[mat_id].diffuse[0], roof_materials[mat_id].diffuse[1], roof_materials[mat_id].diffuse[2]);
-            }
-            roof_materialGroups.push_back({VAO, VBO, static_cast<GLsizei>(verts.size() / 3), color});
-        }
-    }
+    // Load NorthWall
+    std::vector<MaterialGroup> northwall_materialGroups = loadObjModel("N_SWall.obj", reader_config);
 
     // Main loop
-    do
-    {
+    do {
         glfwPollEvents();
 
-        glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+        glClearColor(0.678f, 0.847f, 0.902f, 1.0f); // background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shaderProgram);
@@ -225,30 +496,52 @@ int main()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        // Render Carpet
-        glm::mat4 carpetModel = glm::mat4(1.0f);
-        carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
-        carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, -10.0f, 0.0f)); // Adjust position
-        // Add any specific rotations for the carpet if needed
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
-        for (const auto& group : carpet_materialGroups) {
-            GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-            glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
-            glBindVertexArray(group.VAO);
-            glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+        // --- Render Carpet ---
+        if (!carpet_materialGroups.empty()) {
+            glm::mat4 carpetModel = glm::mat4(1.0f);
+            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
+            carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, -10.0f, 0.0f)); // Adjust position
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
+            for (const auto& group : carpet_materialGroups) {
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+            }
         }
 
-        // Render Roof
-        glm::mat4 roofModel = glm::mat4(1.0f);
-        roofModel = glm::scale(roofModel, glm::vec3(0.15f)); // Adjust scale
-        roofModel = glm::translate(roofModel, glm::vec3(0.0f, 10.0f, 0.0f)); // Adjust position
-        // Add any specific rotations for the roof if needed
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(roofModel));
-        for (const auto& group : roof_materialGroups) {
-            GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-            glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
-            glBindVertexArray(group.VAO);
-            glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+        // --- Render Roof ---
+        if (!roof_materialGroups.empty()) {
+            glm::mat4 roofModel = glm::mat4(1.0f);
+            roofModel = glm::scale(roofModel, glm::vec3(0.15f)); // Adjust scale
+            roofModel = glm::translate(roofModel, glm::vec3(0.0f, 10.0f, 0.0f)); // Adjust position
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(roofModel));
+            for (const auto& group : roof_materialGroups) {
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+            }
+        }
+
+        // --- Render NorthWall ---
+        if (!northwall_materialGroups.empty()) {
+            glm::mat4 northWallModel = glm::mat4(1.0f); // Identity, or adjust if you want transforms
+            northWallModel = glm::scale(northWallModel, glm::vec3(0.15f)); // Shrink it if it's too big
+            northWallModel = glm::translate(northWallModel, glm::vec3(0.5f, 0.0f, 0.0f));
+            northWallModel = glm::rotate(northWallModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(northWallModel));
+            for (const auto& group : northwall_materialGroups) {
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+            }
+        }
+
+        // Render all furniture
+        for (const auto& furniture : furnitureCollection) {
+            furniture.render(shaderProgram);
         }
 
         glfwSwapBuffers(window);
@@ -256,7 +549,27 @@ int main()
 
     } while (glfwGetKey(window, GLFW_KEY_SPACE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0);
 
-    // Cleanup
+    // Cleanup - Free all VAOs and VBOs
+    for (const auto& furniture : furnitureCollection) {
+        for (const auto& group : furniture.materialGroups) {
+            glDeleteVertexArrays(1, &group.VAO);
+            glDeleteBuffers(1, &group.VBO);
+        }
+    }
+    // Cleanup for room objects
+    for (const auto& group : carpet_materialGroups) {
+        glDeleteVertexArrays(1, &group.VAO);
+        glDeleteBuffers(1, &group.VBO);
+    }
+    for (const auto& group : roof_materialGroups) {
+        glDeleteVertexArrays(1, &group.VAO);
+        glDeleteBuffers(1, &group.VBO);
+    }
+    for (const auto& group : northwall_materialGroups) {
+        glDeleteVertexArrays(1, &group.VAO);
+        glDeleteBuffers(1, &group.VBO);
+    }
+
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
