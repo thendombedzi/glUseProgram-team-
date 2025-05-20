@@ -12,6 +12,8 @@
 
 #include "shader.hpp"
 #include "tiny_obj_loader.h"
+#include "Objects/EastWall/WindowWall.hpp"
+#include "Objects/WestWall/Wall.hpp"
 
 using namespace glm;
 using namespace std;
@@ -479,6 +481,12 @@ int main() {
     // Load NorthWall
     std::vector<MaterialGroup> northwall_materialGroups = loadObjModel("N_SWall.obj", reader_config);
 
+
+    // East and West Walls
+    WindowWall wall(8,8,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
+    Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
+
+
     // Main loop
     do {
         glfwPollEvents();
@@ -543,6 +551,10 @@ int main() {
         for (const auto& furniture : furnitureCollection) {
             furniture.render(shaderProgram);
         }
+
+        //Render East and West Walls
+        wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
+        westWall.draw(view, projection, shaderProgram);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
