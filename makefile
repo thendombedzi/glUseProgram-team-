@@ -1,5 +1,5 @@
 # Source files
-files = Objects/EastWall/WindowUnit.cpp Objects/EastWall/WindowWall.cpp Objects/EastWall/Verticies.cpp shader.cpp
+files = Objects/EastWall/WindowUnit.cpp Objects/EastWall/WindowWall.cpp Objects/EastWall/Verticies.cpp shader.cpp tiny_obj_loader.cc 
 
 # Compiler and flags
 CXX = g++
