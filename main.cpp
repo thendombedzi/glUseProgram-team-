@@ -198,7 +198,7 @@ int main()
     float groundLevel = 0.0f; // Set the common ground level for all furniture
     
     // 1-2. Loading Blue Carpet (2 instances)
-    auto blue_materialGroups = loadObjModel("blue.obj", reader_config);
+    auto blue_materialGroups = loadObjModel("Objects/blue.obj", reader_config);
     if (!blue_materialGroups.empty()) {
         // First blue carpet
         furnitureCollection.push_back({
@@ -218,7 +218,7 @@ int main()
     }
     
     // 3-4. Loading Yellow (2 instances)
-    auto yellow_materialGroups = loadObjModel("yellow.obj", reader_config);
+    auto yellow_materialGroups = loadObjModel("Objects/yellow.obj", reader_config);
     if (!yellow_materialGroups.empty()) {
         // First yellow
         furnitureCollection.push_back({
@@ -238,7 +238,7 @@ int main()
     }
     
     // 5-7. Loading LCouch (3 instances - 2 connected, 1 separate)
-    auto lcouch_materialGroups = loadObjModel("Lcouch.obj", reader_config);
+    auto lcouch_materialGroups = loadObjModel("Objects/Lcouch.obj", reader_config);
     if (!lcouch_materialGroups.empty()) {
         // First LCouch (part of connected pair)
         furnitureCollection.push_back({
@@ -266,7 +266,7 @@ int main()
     }
     
     // 8-12. Loading Ornaments (5 instances)
-    auto ornament_materialGroups = loadObjModel("Ornament.obj", reader_config);
+    auto ornament_materialGroups = loadObjModel("Objects/Ornament.obj", reader_config);
     if (!ornament_materialGroups.empty()) {
         // Ornament 1
         furnitureCollection.push_back({
@@ -310,7 +310,7 @@ int main()
     }
     
     // 13-14. Loading Dividers (2 instances)
-    auto divider_materialGroups = loadObjModel("divider.obj", reader_config);
+    auto divider_materialGroups = loadObjModel("Objects/divider.obj", reader_config);
     if (!divider_materialGroups.empty()) {
         // Divider 1
         furnitureCollection.push_back({
@@ -330,7 +330,7 @@ int main()
     }
     
     // 15-16. Loading CubicCouch (2 instances)
-    auto cubicCouch_materialGroups = loadObjModel("cubicCouch.obj", reader_config);
+    auto cubicCouch_materialGroups = loadObjModel("Objects/cubicCouch.obj", reader_config);
     if (!cubicCouch_materialGroups.empty()) {
         // First CubicCouch 
         furnitureCollection.push_back({
@@ -350,7 +350,7 @@ int main()
     }
     
     // 17-20. Loading Small Tables (4 instances)
-    auto smallTable_materialGroups = loadObjModel("smallTable.obj", reader_config);
+    auto smallTable_materialGroups = loadObjModel("Objects/smallTable.obj", reader_config);
     if (!smallTable_materialGroups.empty()) {
         // Small Table 1
         furnitureCollection.push_back({
@@ -386,7 +386,7 @@ int main()
     }
     
     // 21-24. Loading Tall Tables (4 instances - 2 pairs that are close to each other)
-    auto tallTable_materialGroups = loadObjModel("tallTable.obj", reader_config);
+    auto tallTable_materialGroups = loadObjModel("Objects/tallTable.obj", reader_config);
     if (!tallTable_materialGroups.empty()) {
         // Tall Table 1 (pair 1)
         furnitureCollection.push_back({
@@ -422,7 +422,7 @@ int main()
     }
     
     // 25-26. Loading Short Tables (2 instances)
-    auto shortTable_materialGroups = loadObjModel("shortTable.obj", reader_config);
+    auto shortTable_materialGroups = loadObjModel("Objects/shortTable.obj", reader_config);
     if (!shortTable_materialGroups.empty()) {
         // Short Table 1
         furnitureCollection.push_back({
@@ -442,7 +442,7 @@ int main()
     }
     
     // 27-30. Loading Comfortable Chairs (4 instances)
-    auto comfortableChair_materialGroups = loadObjModel("comfortableChair.obj", reader_config);
+    auto comfortableChair_materialGroups = loadObjModel("Objects/comfortableChair.obj", reader_config);
     if (!comfortableChair_materialGroups.empty()) {
         // Near Short Table 1
         // Chair 1
