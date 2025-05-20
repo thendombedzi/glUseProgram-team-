@@ -1,10 +1,10 @@
 #version 330 core
 
-//in vec4 fragmentColor;
-out vec4 color;
+in vec3 FragPos;
+out vec4 FragColor;
+
 uniform vec4 objectColor;
 
-void main() 
-{
-    color = objectColor;
+void main() {
+    FragColor = objectColor;
 }

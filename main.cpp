@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -205,7 +206,7 @@ int main()
             blue_materialGroups,
             glm::vec3(-5.0f, groundLevel, 0.0f), // Position
             glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                     // Scale
+            glm::vec3(1.0f)                      // Scale
         });
         
         // Second blue carpet
@@ -213,7 +214,7 @@ int main()
             blue_materialGroups,
             glm::vec3(5.0f, groundLevel, 3.0f),  // Position
             glm::vec3(0.0f, 45.0f, 0.0f),        // Rotation
-            glm::vec3(1.0f)                     // Scale
+            glm::vec3(1.0f)                      // Scale
         });
     }
     
@@ -224,8 +225,8 @@ int main()
         furnitureCollection.push_back({
             yellow_materialGroups,
             glm::vec3(-3.0f, groundLevel, -6.0f), // Position
-            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(0.0f, 180.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                        // Scale
         });
         
         // Second yellow
@@ -233,202 +234,170 @@ int main()
             yellow_materialGroups,
             glm::vec3(7.0f, groundLevel, -4.0f),  // Position
             glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(1.0f)                       // Scale
         });
     }
     
     // 5-7. Loading LCouch (3 instances - 2 connected, 1 separate)
-    auto lcouch_materialGroups = loadObjModel("Objects/Lcouch.obj", reader_config);
+    auto lcouch_materialGroups = loadObjModel("Objects/LCouch.obj", reader_config);
     if (!lcouch_materialGroups.empty()) {
-        // First LCouch (part of connected pair)
+        // First LCouch (part of connected pair, middle of top side)
         furnitureCollection.push_back({
             lcouch_materialGroups,
-            glm::vec3(-8.0f, groundLevel, -8.0f), // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(0.0f, groundLevel, 8.0f), // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(1.0f)                      // Scale
         });
         
-        // Second LCouch (connected to first)
+        // Second LCouch (connected to first, forming L-shape)
         furnitureCollection.push_back({
             lcouch_materialGroups,
-            glm::vec3(-8.0f, groundLevel, -4.5f), // Position
-            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(2.0f, groundLevel, 8.0f), // Position
+            glm::vec3(0.0f, 90.0f, 0.0f),        // Rotation for L-shape
             glm::vec3(1.0f)                      // Scale
         });
         
-        // Third LCouch (separate)
+        // Third LCouch (separate - original position maintained as it was not part of the request)
         furnitureCollection.push_back({
             lcouch_materialGroups,
             glm::vec3(8.0f, groundLevel, 8.0f),   // Position
             glm::vec3(0.0f, 135.0f, 0.0f),        // Rotation
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(1.0f)                       // Scale
         });
     }
     
-    // 8-12. Loading Ornaments (5 instances)
+    // 8-12. Loading Ornaments (5 instances - lower side, equally spaced towards left)
     auto ornament_materialGroups = loadObjModel("Objects/Ornament.obj", reader_config);
     if (!ornament_materialGroups.empty()) {
         // Ornament 1
         furnitureCollection.push_back({
             ornament_materialGroups,
-            glm::vec3(-6.0f, groundLevel, 6.0f),  // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
-            glm::vec3(1.0f)                       // Scale
+            glm::vec3(-8.0f, groundLevel, -6.0f), // Position (far left, lower)
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
+            glm::vec3(1.0f)                      // Scale
         });
         
         // Ornament 2
         furnitureCollection.push_back({
             ornament_materialGroups,
-            glm::vec3(6.0f, groundLevel, -6.0f),  // Position
-            glm::vec3(0.0f, 45.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                       // Scale
+            glm::vec3(-6.0f, groundLevel, -6.0f), // Position
+            glm::vec3(0.0f, 45.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                      // Scale
         });
         
         // Ornament 3
         furnitureCollection.push_back({
             ornament_materialGroups,
-            glm::vec3(0.0f, groundLevel, 8.0f),   // Position
-            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                       // Scale
+            glm::vec3(-4.0f, groundLevel, -6.0f), // Position
+            glm::vec3(0.0f, 90.0f, 0.0f),        // Rotation
+            glm::vec3(1.0f)                      // Scale
         });
         
         // Ornament 4
         furnitureCollection.push_back({
             ornament_materialGroups,
-            glm::vec3(-4.0f, groundLevel, -3.0f), // Position
-            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
-            glm::vec3(1.0f)                       // Scale
+            glm::vec3(-2.0f, groundLevel, -6.0f), // Position
+            glm::vec3(0.0f, 180.0f, 0.0f),       // Rotation
+            glm::vec3(1.0f)                      // Scale
         });
         
         // Ornament 5
         furnitureCollection.push_back({
             ornament_materialGroups,
-            glm::vec3(3.0f, groundLevel, 0.0f),   // Position
-            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(0.0f, groundLevel, -6.0f),  // Position (rightmost of the group)
+            glm::vec3(0.0f, 270.0f, 0.0f),       // Rotation
+            glm::vec3(1.0f)                      // Scale
+        });
+    }
+    
+    // 13-14. Loading Dividers (2 instances - one for cubic couch, one for each L-couch back)
+    auto divider_materialGroups = loadObjModel("Objects/divider.obj", reader_config);
+    if (!divider_materialGroups.empty()) {
+        // Divider for cubic couch
+        furnitureCollection.push_back({
+            divider_materialGroups,
+            glm::vec3(0.0f, groundLevel, -2.0f),  // Position (top side of cubic couch)
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+        
+        // Divider for first L-couch back
+        furnitureCollection.push_back({
+            divider_materialGroups,
+            glm::vec3(0.0f, groundLevel, 9.0f),   // Position (behind first L-couch)
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
+        });
+
+        // Divider for second L-couch back
+        furnitureCollection.push_back({
+            divider_materialGroups,
+            glm::vec3(2.0f, groundLevel, 9.0f),   // Position (behind second L-couch)
+            glm::vec3(0.0f, 90.0f, 0.0f),          // Rotation
             glm::vec3(1.0f)                       // Scale
         });
     }
     
-    // 13-14. Loading Dividers (2 instances)
-    auto divider_materialGroups = loadObjModel("Objects/divider.obj", reader_config);
-    if (!divider_materialGroups.empty()) {
-        // Divider 1
-        furnitureCollection.push_back({
-            divider_materialGroups,
-            glm::vec3(0.0f, groundLevel, -9.0f),  // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
-            glm::vec3(1.0f)                      // Scale
-        });
-        
-        // Divider 2
-        furnitureCollection.push_back({
-            divider_materialGroups,
-            glm::vec3(-9.0f, groundLevel, 0.0f),  // Position
-            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
-        });
-    }
-    
-    // 15-16. Loading CubicCouch (2 instances)
+    // 15-16. Loading CubicCouch (1 instance now, as per request)
     auto cubicCouch_materialGroups = loadObjModel("Objects/cubicCouch.obj", reader_config);
     if (!cubicCouch_materialGroups.empty()) {
-        // First CubicCouch 
+        // CubicCouch (left of tall tables)
         furnitureCollection.push_back({
             cubicCouch_materialGroups,
-            glm::vec3(-2.0f, groundLevel, 3.0f),  // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
-            glm::vec3(1.0f)                      // Scale
-        });
-        
-        // Second CubicCouch
-        furnitureCollection.push_back({
-            cubicCouch_materialGroups,
-            glm::vec3(4.0f, groundLevel, -8.0f),  // Position
-            glm::vec3(0.0f, 30.0f, 0.0f),         // Rotation
+            glm::vec3(0.0f, groundLevel, 0.0f),   // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(1.0f)                      // Scale
         });
     }
     
-    // 17-20. Loading Small Tables (4 instances)
+    // 17-20. Loading Small Tables (2 instances, at left end with chairs)
     auto smallTable_materialGroups = loadObjModel("Objects/smallTable.obj", reader_config);
     if (!smallTable_materialGroups.empty()) {
-        // Small Table 1
+        // Small Table 1 (left end)
         furnitureCollection.push_back({
             smallTable_materialGroups,
-            glm::vec3(-4.0f, groundLevel, 8.0f),  // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(-9.0f, groundLevel, 6.0f),  // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(1.0f)                      // Scale
         });
         
-        // Small Table 2
+        // Small Table 2 (left end)
         furnitureCollection.push_back({
             smallTable_materialGroups,
-            glm::vec3(4.0f, groundLevel, 6.0f),   // Position
-            glm::vec3(0.0f, 45.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
-        });
-        
-        // Small Table 3
-        furnitureCollection.push_back({
-            smallTable_materialGroups,
-            glm::vec3(-6.0f, groundLevel, -5.0f), // Position
-            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
-        });
-        
-        // Small Table 4
-        furnitureCollection.push_back({
-            smallTable_materialGroups,
-            glm::vec3(2.0f, groundLevel, -3.0f),  // Position
-            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(-9.0f, groundLevel, 2.0f),  // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(1.0f)                      // Scale
         });
     }
     
-    // 21-24. Loading Tall Tables (4 instances - 2 pairs that are close to each other)
+    // 21-24. Loading Tall Tables (2 instances, towards the right)
     auto tallTable_materialGroups = loadObjModel("Objects/tallTable.obj", reader_config);
     if (!tallTable_materialGroups.empty()) {
-        // Tall Table 1 (pair 1)
+        // Tall Table 1 (right side)
         furnitureCollection.push_back({
             tallTable_materialGroups,
-            glm::vec3(-7.0f, groundLevel, 3.0f),  // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(6.0f, groundLevel, 0.0f),   // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(1.0f)                      // Scale
         });
         
-        // Tall Table 2 (pair 1)
+        // Tall Table 2 (right side, spaced from first)
         furnitureCollection.push_back({
             tallTable_materialGroups,
-            glm::vec3(-7.0f, groundLevel, 5.0f),  // Position
-            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
-            glm::vec3(1.0f)                      // Scale
-        });
-        
-        // Tall Table 3 (pair 2)
-        furnitureCollection.push_back({
-            tallTable_materialGroups,
-            glm::vec3(7.0f, groundLevel, -7.0f),  // Position
-            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
-        });
-        
-        // Tall Table 4 (pair 2)
-        furnitureCollection.push_back({
-            tallTable_materialGroups,
-            glm::vec3(9.0f, groundLevel, -7.0f),  // Position
-            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(8.0f, groundLevel, 0.0f),   // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(1.0f)                      // Scale
         });
     }
     
-    // 25-26. Loading Short Tables (2 instances)
+    // 25-26. Loading Short Tables (Original positions maintained as they were not part of the request)
     auto shortTable_materialGroups = loadObjModel("Objects/shortTable.obj", reader_config);
     if (!shortTable_materialGroups.empty()) {
         // Short Table 1
         furnitureCollection.push_back({
             shortTable_materialGroups,
             glm::vec3(0.0f, groundLevel, 4.0f),   // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(1.0f)                      // Scale
         });
         
@@ -436,45 +405,45 @@ int main()
         furnitureCollection.push_back({
             shortTable_materialGroups,
             glm::vec3(2.0f, groundLevel, -7.0f),  // Position
-            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
+            glm::vec3(0.0f, 90.0f, 0.0f),        // Rotation
             glm::vec3(1.0f)                      // Scale
         });
     }
     
-    // 27-30. Loading Comfortable Chairs (4 instances)
+    // 27-30. Loading Comfortable Chairs (4 instances, 2 for each small table)
     auto comfortableChair_materialGroups = loadObjModel("Objects/comfortableChair.obj", reader_config);
     if (!comfortableChair_materialGroups.empty()) {
-        // Near Short Table 1
+        // Chairs for Small Table 1
         // Chair 1
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(-1.0f, groundLevel, 3.0f),  // Position
-            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(-10.0f, groundLevel, 5.0f), // Position (next to Small Table 1)
+            glm::vec3(0.0f, 90.0f, 0.0f),        // Rotation to face table
             glm::vec3(1.0f)                      // Scale
         });
         
         // Chair 2
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(1.0f, groundLevel, 3.0f),   // Position
-            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotation
+            glm::vec3(-8.0f, groundLevel, 5.0f),  // Position (next to Small Table 1)
+            glm::vec3(0.0f, -90.0f, 0.0f),       // Rotation to face table
             glm::vec3(1.0f)                      // Scale
         });
         
-        // Near Short Table 2
+        // Chairs for Small Table 2
         // Chair 3
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(1.0f, groundLevel, -8.0f),  // Position
-            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(-10.0f, groundLevel, 1.0f), // Position (next to Small Table 2)
+            glm::vec3(0.0f, 90.0f, 0.0f),        // Rotation to face table
             glm::vec3(1.0f)                      // Scale
         });
         
         // Chair 4
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(3.0f, groundLevel, -8.0f),  // Position
-            glm::vec3(0.0f, 270.0f, 0.0f),        // Rotation
+            glm::vec3(-8.0f, groundLevel, 1.0f),  // Position (next to Small Table 2)
+            glm::vec3(0.0f, -90.0f, 0.0f),       // Rotation to face table
             glm::vec3(1.0f)                      // Scale
         });
     }
