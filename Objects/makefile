@@ -1,8 +1,8 @@
 #add all the files that you need to the files makefile variable below as a space seperated list
 files = 
 
-main: main.cpp glad.c
-	g++ -g Shader.cpp $(files) main.cpp glad.c -lglfw3 -pthread -lGLEW -ldl -lGL -o main
+main: main.cpp 
+	g++ -g shader.cpp Camera.cpp main.cpp -lglfw -pthread -lGLEW -ldl -lGL -lassimp -o main
 
 clean:
 	rm -f *.o main
