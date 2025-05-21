@@ -22,6 +22,24 @@ using namespace std;
 GLuint shaderProgram;
 glm::mat4 view, projection;
 
+// Camera parameters
+glm::vec3 cameraPos   = glm::vec3(20.0f, 15.0f, 20.0f); // Initial camera position
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // Camera looks towards negative Z initially
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);  // Up direction
+
+// Camera rotation
+float yawM = -90.0f; // yawM is initialized to -90.0 degrees since a yawM of 0.0 results in a direction vector pointing to the right, so we initially rotate a bit to the left.
+float pitchM = 0.0f;
+
+// Mouse input
+float lastX = 1400 / 2.0f; // Initial mouse X position (center of window)
+float lastY = 1000 / 2.0f; // Initial mouse Y position (center of window)
+bool firstMouse = true;
+
+// Timing for consistent movement speed
+float deltaTime = 0.0f; // Time between current frame and last frame
+float lastFrame = 0.0f; // Time of last frame
+
 // Define MaterialGroup at global scope before using it
 struct MaterialGroup {
     GLuint VAO, VBO;
@@ -68,6 +86,38 @@ inline GLFWwindow *setUp() {
     glfwMakeContextCurrent(window);
     startUpGLEW();
     return window;
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to top
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f; // Adjust this value for mouse sensitivity
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yawM += xoffset;
+    pitchM += yoffset;
+
+    // Constrain pitchM to avoid flipping the camera
+    if (pitchM > 89.0f)
+        pitchM = 89.0f;
+    if (pitchM < -89.0f)
+        pitchM = -89.0f;\
+    glm::vec3 front;
+    front.x = cos(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    front.y = sin(glm::radians(pitchM));
+    front.z = sin(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    cameraFront = glm::normalize(front);
 }
 
 // Function to load object files and create material groups
@@ -171,11 +221,13 @@ int main() {
     shaderProgram = LoadShaders("vertexShader.glsl", "fragmentShader.glsl");
 
     // Set camera to view the entire room and furniture
-    view = glm::lookAt(
-        glm::vec3(20.0f, 15.0f, 20.0f), // Position further back and higher to see full room
-        glm::vec3(0.0f, 0.0f, 0.0f),    // Look at the origin
-        glm::vec3(0.0f, 1.0f, 0.0f)
-    );
+    // view = glm::lookAt(
+    //     glm::vec3(20.0f, 15.0f, 20.0f), // Position further back and higher to see full room
+    //     glm::vec3(0.0f, 0.0f, 0.0f),    // Look at the origin
+    //     glm::vec3(0.0f, 1.0f, 0.0f)
+    // );
+
+    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
     // Set projection matrix
     int width, height;
@@ -478,13 +530,38 @@ int main() {
 
 
     // East and West Walls
-    WindowWall wall(8,8,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
+    WindowWall wall(30,25,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
     Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
 
+        
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide and capture mouse cursor
+    glfwSetCursorPosCallback(window, mouse_callback); // Register the callback function
 
     // Main loop
     do {
-        glfwPollEvents();
+        
+        // Per-frame time logic
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        // Input processing (keyboard movement)
+        float cameraSpeed = 10.0f * deltaTime; // Adjust this value to change speed
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            cameraPos += cameraSpeed * cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            cameraPos -= cameraSpeed * cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) // Move up
+            cameraPos += cameraSpeed * cameraUp;
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) // Move down
+            cameraPos -= cameraSpeed * cameraUp;
+
+        // Update the view matrix (camera "looks at" cameraFront from cameraPos)
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
         glClearColor(0.678f, 0.847f, 0.902f, 1.0f); // background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -499,38 +576,54 @@ int main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        // --- Render Carpet ---
-        if (!carpet_materialGroups.empty()) {
-            glm::mat4 carpetModel = glm::mat4(1.0f);
-            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
-            carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, -10.0f, 0.0f)); // Adjust position
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
-            for (const auto& group : carpet_materialGroups) {
-                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
-                glBindVertexArray(group.VAO);
-                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
-            }
-        }
+        // // --- Render Carpet ---
+        // if (!carpet_materialGroups.empty()) {
+        //     glm::mat4 carpetModel = glm::mat4(1.0f);
+        //     carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
+        //     carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, -10.0f, 0.0f)); // Adjust position
+        //     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
+        //     for (const auto& group : carpet_materialGroups) {
+        //         GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+        //         glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+        //         glBindVertexArray(group.VAO);
+        //         glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+        //     }
+        // }
 
         // --- Render Roof ---
         if (!roof_materialGroups.empty()) {
-            glm::mat4 roofModel = glm::mat4(1.0f);
-            roofModel = glm::scale(roofModel, glm::vec3(0.15f)); // Adjust scale
-            roofModel = glm::translate(roofModel, glm::vec3(0.0f, 10.0f, 0.0f)); // Adjust position
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(roofModel));
-            for (const auto& group : roof_materialGroups) {
-                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
-                glBindVertexArray(group.VAO);
-                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+
+            // Define duplication parameters
+            int numDuplicates = 4; // Number of roof panels you want
+            float zOffset = 15.0f; 
+
+            for (int i = 0; i < numDuplicates; ++i) {
+                glm::mat4 roofModel = glm::mat4(1.0f);
+
+                // Apply base transformations (from your original code)
+                roofModel = glm::scale(roofModel, glm::vec3(0.8f)); // Adjust scale
+                roofModel = glm::translate(roofModel, glm::vec3(-2.5f, 25.0f, 25.0f)); // Adjust base position
+                roofModel = glm::rotate(roofModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
+
+                // Apply duplication offset
+                // For each duplicate, translate it further along the X-axis
+                roofModel = glm::translate(roofModel, glm::vec3(i * zOffset,0.0f ,0.0f ));
+
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(roofModel));
+
+                for (const auto& group : roof_materialGroups) {
+                    GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                    glBindVertexArray(group.VAO);
+                    glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+                }
             }
         }
 
         // --- Render NorthWall ---
         if (!northwall_materialGroups.empty()) {
             glm::mat4 northWallModel = glm::mat4(1.0f); // Identity, or adjust if you want transforms
-            northWallModel = glm::scale(northWallModel, glm::vec3(0.15f)); // Shrink it if it's too big
+            northWallModel = glm::scale(northWallModel, glm::vec3(0.5f)); // Shrink it if it's too big
             northWallModel = glm::translate(northWallModel, glm::vec3(0.5f, 0.0f, 0.0f));
             northWallModel = glm::rotate(northWallModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(northWallModel));
@@ -542,14 +635,36 @@ int main() {
             }
         }
 
-        // Render all furniture
-        for (const auto& furniture : furnitureCollection) {
-            furniture.render(shaderProgram);
+        // --- Render South Wall ---
+        if (!northwall_materialGroups.empty()) {
+            glm::mat4 southWallModel = glm::mat4(1.0f);
+            // Apply mirror scale (e.g., along X-axis to reflect across YZ plane)
+            southWallModel = glm::scale(southWallModel, glm::vec3(-1.0f, 1.0f, 1.0f));
+            // Apply the original transformations (or adjust as needed for the mirrored object)
+            southWallModel = glm::scale(southWallModel, glm::vec3(0.5f));
+            southWallModel = glm::translate(southWallModel, glm::vec3(0.5f, 0.0f, 0.0f)); // Same translation as original
+            southWallModel = glm::rotate(southWallModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        
+            southWallModel = glm::translate(southWallModel, glm::vec3(-10.0f, 0.0f, 0.0f)); // Example adjustment
+
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(southWallModel));
+            for (const auto& group : northwall_materialGroups) {
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+            }
         }
+
+        // // Render all furniture
+        // for (const auto& furniture : furnitureCollection) {
+        //     furniture.render(shaderProgram);
+        // }
 
         //Render East and West Walls
         wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
-        westWall.draw(view, projection, shaderProgram);
+        // westWall.draw(view, projection, shaderProgram);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -581,3 +696,4 @@ int main() {
     glfwTerminate();
     return 0;
 }
+
