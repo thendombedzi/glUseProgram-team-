@@ -42,6 +42,24 @@ bool firstMouse = true;
 float deltaTime = 0.0f; // Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
+// Camera parameters
+glm::vec3 cameraPos   = glm::vec3(20.0f, 15.0f, 20.0f); // Initial camera position
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // Camera looks towards negative Z initially
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);  // Up direction
+
+// Camera rotation
+float yawM = -90.0f; // yawM is initialized to -90.0 degrees since a yawM of 0.0 results in a direction vector pointing to the right, so we initially rotate a bit to the left.
+float pitchM = 0.0f;
+
+// Mouse input
+float lastX = 1400 / 2.0f; // Initial mouse X position (center of window)
+float lastY = 1000 / 2.0f; // Initial mouse Y position (center of window)
+bool firstMouse = true;
+
+// Timing for consistent movement speed
+float deltaTime = 0.0f; // Time between current frame and last frame
+float lastFrame = 0.0f; // Time of last frame
+
 // Define MaterialGroup at global scope before using it
 // struct MaterialGroup {
 //     GLuint VAO, VBO;
@@ -790,7 +808,7 @@ int main() {
         //westWall.draw(view, projection, shaderProgram);
 =======
         // westWall.draw(view, projection, shaderProgram);
->>>>>>> ee422df (placed walls and roof)
+        //westWall.draw(view, projection, shaderProgram);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
