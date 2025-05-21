@@ -14,6 +14,7 @@
 #include "tiny_obj_loader.h"
 #include "Objects/EastWall/WindowWall.hpp"
 #include "Objects/WestWall/Wall.hpp"
+#include "lightingManager.hpp"
 
 using namespace glm;
 using namespace std;
@@ -41,11 +42,11 @@ float deltaTime = 0.0f; // Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
 // Define MaterialGroup at global scope before using it
-struct MaterialGroup {
-    GLuint VAO, VBO;
-    GLsizei vertexCount;
-    glm::vec3 color;
-};
+// struct MaterialGroup {
+//     GLuint VAO, VBO;
+//     GLsizei vertexCount;
+//     glm::vec3 color;
+// };
 
 const char *getError() {
     const char *errorDescription;
@@ -120,60 +121,126 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     cameraFront = glm::normalize(front);
 }
 
-// Function to load object files and create material groups
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to top
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f; // Adjust this value for mouse sensitivity
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yawM += xoffset;
+    pitchM += yoffset;
+
+    // Constrain pitchM to avoid flipping the camera
+    if (pitchM > 89.0f)
+        pitchM = 89.0f;
+    if (pitchM < -89.0f)
+        pitchM = -89.0f;\
+    glm::vec3 front;
+    front.x = cos(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    front.y = sin(glm::radians(pitchM));
+    front.z = sin(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    cameraFront = glm::normalize(front);
+}
+
+// Your MaterialGroup definition
+struct MaterialGroup {
+    GLuint VAO;
+    GLuint VBO;
+    GLsizei vertexCount;
+    glm::vec3 color;
+};
+
+struct InterleavedVertex {
+    float px, py, pz;  // Position
+    float nx, ny, nz;  // Normal
+};
+
 std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyobj::ObjReaderConfig& config) {
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(filename, config)) {
         std::cerr << "TinyObjReader failed to load " << filename << ": " << reader.Error() << std::endl;
         return {};
     }
+
     if (!reader.Warning().empty()) {
         std::cout << "TinyObjReader warning (" << filename << "): " << reader.Warning() << std::endl;
     }
-    
-    const tinyobj::attrib_t &attrib = reader.GetAttrib();
-    const std::vector<tinyobj::shape_t> &shapes = reader.GetShapes();
-    const std::vector<tinyobj::material_t> &materials = reader.GetMaterials();
-    
+
+    const auto& attrib = reader.GetAttrib();
+    const auto& shapes = reader.GetShapes();
+    const auto& materials = reader.GetMaterials();
+
     std::vector<MaterialGroup> materialGroups;
-    
-    for (size_t s = 0; s < shapes.size(); ++s) {
-        const auto& shape = shapes[s];
-        std::unordered_map<int, std::vector<float>> materialVertexMap;
-        
+
+    for (const auto& shape : shapes) {
+        std::unordered_map<int, std::vector<InterleavedVertex>> materialVertexMap;
+
+        size_t index_offset = 0;
         for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
-            int mat_id = shape.mesh.material_ids[f];
             int fv = shape.mesh.num_face_vertices[f];
-            
+            int mat_id = shape.mesh.material_ids[f];
+
             for (size_t v = 0; v < fv; ++v) {
-                tinyobj::index_t idx = shape.mesh.indices[f * fv + v];
-                materialVertexMap[mat_id].insert(materialVertexMap[mat_id].end(), {
-                    attrib.vertices[3 * idx.vertex_index + 0],
-                    attrib.vertices[3 * idx.vertex_index + 1],
-                    attrib.vertices[3 * idx.vertex_index + 2]
-                });
+                tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+
+                InterleavedVertex vertex;
+                vertex.px = attrib.vertices[3 * idx.vertex_index + 0];
+                vertex.py = attrib.vertices[3 * idx.vertex_index + 1];
+                vertex.pz = attrib.vertices[3 * idx.vertex_index + 2];
+
+                if (!attrib.normals.empty() && idx.normal_index >= 0) {
+                    vertex.nx = attrib.normals[3 * idx.normal_index + 0];
+                    vertex.ny = attrib.normals[3 * idx.normal_index + 1];
+                    vertex.nz = attrib.normals[3 * idx.normal_index + 2];
+                } else {
+                    vertex.nx = 0.0f; vertex.ny = 0.0f; vertex.nz = 1.0f; // fallback
+                }
+
+                materialVertexMap[mat_id].push_back(vertex);
             }
+
+            index_offset += fv;
         }
-        
+
         for (const auto& [mat_id, verts] : materialVertexMap) {
             GLuint VAO, VBO;
             glGenVertexArrays(1, &VAO);
             glGenBuffers(1, &VBO);
+
             glBindVertexArray(VAO);
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+            glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(InterleavedVertex), verts.data(), GL_STATIC_DRAW);
+
+            // Position: location 0
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(InterleavedVertex), (void*)0);
             glEnableVertexAttribArray(0);
-            
-            glm::vec3 color(0.8f);
+
+            // Normal: location 1
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(InterleavedVertex), (void*)(3 * sizeof(float)));
+            glEnableVertexAttribArray(1);
+
+            // Color from material or default
+            glm::vec3 color(0.8f); // default
             if (mat_id >= 0 && mat_id < (int)materials.size()) {
-                color = glm::vec3(materials[mat_id].diffuse[0], materials[mat_id].diffuse[1], materials[mat_id].diffuse[2]);
+                const auto& m = materials[mat_id];
+                color = glm::vec3(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
             }
-            
-            materialGroups.push_back({VAO, VBO, static_cast<GLsizei>(verts.size() / 3), color});
+
+            materialGroups.push_back({ VAO, VBO, static_cast<GLsizei>(verts.size()), color });
         }
     }
-    
+
     return materialGroups;
 }
 
@@ -536,6 +603,7 @@ int main() {
         
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide and capture mouse cursor
     glfwSetCursorPosCallback(window, mouse_callback); // Register the callback function
+    LightingManager light;
 
     // Main loop
     do {
@@ -567,6 +635,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shaderProgram);
+        light.upload(shaderProgram);
 
         // Set up matrices uniforms
         GLuint modelLoc = glGetUniformLocation(shaderProgram, "model");
