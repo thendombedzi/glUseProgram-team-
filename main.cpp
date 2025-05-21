@@ -606,6 +606,9 @@ int main() {
     std::vector<MaterialGroup> carpet0_materialGroups = loadObjModel("carpet_0.obj", reader_config);
     std::vector<MaterialGroup> carpet1_materialGroups = loadObjModel("carpet_1.obj", reader_config);
     std::vector<MaterialGroup> carpet2_materialGroups = loadObjModel("carpet_2.obj", reader_config);
+    std::vector<MaterialGroup> carpet0_materialGroups = loadObjModel("carpet_0.obj", reader_config);
+    std::vector<MaterialGroup> carpet1_materialGroups = loadObjModel("carpet_1.obj", reader_config);
+    std::vector<MaterialGroup> carpet2_materialGroups = loadObjModel("carpet_2.obj", reader_config);
 
     // Load Roof
     std::vector<MaterialGroup> roof_materialGroups = loadObjModel("alt_panels.obj", reader_config);
@@ -669,7 +672,6 @@ int main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-<<<<<<< HEAD
         // --- Render Carpet ---
         if (!carpet0_materialGroups.empty()) {
             glm::mat4 carpetModel = glm::mat4(1.0f);
@@ -709,21 +711,6 @@ int main() {
                 glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
         }
-=======
-        // // --- Render Carpet ---
-        // if (!carpet_materialGroups.empty()) {
-        //     glm::mat4 carpetModel = glm::mat4(1.0f);
-        //     carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
-        //     carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, -10.0f, 0.0f)); // Adjust position
-        //     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
-        //     for (const auto& group : carpet_materialGroups) {
-        //         GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-        //         glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
-        //         glBindVertexArray(group.VAO);
-        //         glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
-        //     }
-        // }
->>>>>>> ee422df (placed walls and roof)
 
         // --- Render Roof ---
         if (!roof_materialGroups.empty()) {
