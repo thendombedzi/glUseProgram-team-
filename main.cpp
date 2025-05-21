@@ -41,6 +41,24 @@ bool firstMouse = true;
 float deltaTime = 0.0f; // Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
+// Camera parameters
+glm::vec3 cameraPos   = glm::vec3(20.0f, 15.0f, 20.0f); // Initial camera position
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // Camera looks towards negative Z initially
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);  // Up direction
+
+// Camera rotation
+float yawM = -90.0f; // yawM is initialized to -90.0 degrees since a yawM of 0.0 results in a direction vector pointing to the right, so we initially rotate a bit to the left.
+float pitchM = 0.0f;
+
+// Mouse input
+float lastX = 1400 / 2.0f; // Initial mouse X position (center of window)
+float lastY = 1000 / 2.0f; // Initial mouse Y position (center of window)
+bool firstMouse = true;
+
+// Timing for consistent movement speed
+float deltaTime = 0.0f; // Time between current frame and last frame
+float lastFrame = 0.0f; // Time of last frame
+
 // Define MaterialGroup at global scope before using it
 // struct MaterialGroup {
 //     GLuint VAO, VBO;
@@ -87,38 +105,6 @@ inline GLFWwindow *setUp() {
     glfwMakeContextCurrent(window);
     startUpGLEW();
     return window;
-}
-
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to top
-    lastX = xpos;
-    lastY = ypos;
-
-    float sensitivity = 0.1f; // Adjust this value for mouse sensitivity
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yawM += xoffset;
-    pitchM += yoffset;
-
-    // Constrain pitchM to avoid flipping the camera
-    if (pitchM > 89.0f)
-        pitchM = 89.0f;
-    if (pitchM < -89.0f)
-        pitchM = -89.0f;\
-    glm::vec3 front;
-    front.x = cos(glm::radians(yawM)) * cos(glm::radians(pitchM));
-    front.y = sin(glm::radians(pitchM));
-    front.z = sin(glm::radians(yawM)) * cos(glm::radians(pitchM));
-    cameraFront = glm::normalize(front);
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -762,6 +748,7 @@ int main() {
         //Render East and West Walls
         wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
         // westWall.draw(view, projection, shaderProgram);
+        //westWall.draw(view, projection, shaderProgram);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
