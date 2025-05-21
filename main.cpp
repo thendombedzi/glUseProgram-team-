@@ -15,6 +15,7 @@
 #include "Objects/EastWall/WindowWall.hpp"
 #include "Objects/WestWall/Wall.hpp"
 #include "lightingManager.hpp"
+#include "lightingManager.hpp"
 
 using namespace glm;
 using namespace std;
@@ -136,8 +137,51 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     cameraFront = glm::normalize(front);
 }
 
-// Function to load object files and create material groups
->>>>>>> ee422df (placed walls and roof)
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to top
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f; // Adjust this value for mouse sensitivity
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yawM += xoffset;
+    pitchM += yoffset;
+
+    // Constrain pitchM to avoid flipping the camera
+    if (pitchM > 89.0f)
+        pitchM = 89.0f;
+    if (pitchM < -89.0f)
+        pitchM = -89.0f;\
+    glm::vec3 front;
+    front.x = cos(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    front.y = sin(glm::radians(pitchM));
+    front.z = sin(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    cameraFront = glm::normalize(front);
+}
+
+// Your MaterialGroup definition
+struct MaterialGroup {
+    GLuint VAO;
+    GLuint VBO;
+    GLsizei vertexCount;
+    glm::vec3 color;
+};
+
+struct InterleavedVertex {
+    float px, py, pz;  // Position
+    float nx, ny, nz;  // Normal
+};
+
 std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyobj::ObjReaderConfig& config) {
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(filename, config)) {
@@ -583,7 +627,7 @@ int main() {
         
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide and capture mouse cursor
     glfwSetCursorPosCallback(window, mouse_callback); // Register the callback function
->>>>>>> ee422df (placed walls and roof)
+    LightingManager light;
 
     // Main loop
     do {
