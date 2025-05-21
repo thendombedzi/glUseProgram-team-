@@ -89,6 +89,60 @@ inline GLFWwindow *setUp() {
     return window;
 }
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+// Your MaterialGroup definition
+struct MaterialGroup {
+    GLuint VAO;
+    GLuint VBO;
+    GLsizei vertexCount;
+    glm::vec3 color;
+};
+
+struct InterleavedVertex {
+    float px, py, pz;  // Position
+    float nx, ny, nz;  // Normal
+};
+
+=======
+=======
+>>>>>>> ee422df (placed walls and roof)
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to top
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f; // Adjust this value for mouse sensitivity
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yawM += xoffset;
+    pitchM += yoffset;
+
+    // Constrain pitchM to avoid flipping the camera
+    if (pitchM > 89.0f)
+        pitchM = 89.0f;
+    if (pitchM < -89.0f)
+        pitchM = -89.0f;\
+    glm::vec3 front;
+    front.x = cos(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    front.y = sin(glm::radians(pitchM));
+    front.z = sin(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    cameraFront = glm::normalize(front);
+}
+
+<<<<<<< HEAD
+>>>>>>> 729611f (placed walls and roof)
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 
     if (firstMouse) {
@@ -134,6 +188,9 @@ struct InterleavedVertex {
     float nx, ny, nz;  // Normal
 };
 
+=======
+// Function to load object files and create material groups
+>>>>>>> ee422df (placed walls and roof)
 std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyobj::ObjReaderConfig& config) {
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(filename, config)) {
@@ -573,6 +630,16 @@ int main() {
     std::vector<MaterialGroup> northwall_materialGroups = loadObjModel("N_SWall.obj", reader_config);
 
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+    WindowWall wall(8,8,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
+    Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
+
+    LightingManager light;
+=======
+>>>>>>> 729611f (placed walls and roof)
     // East and West Walls
     WindowWall wall(30,25,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
     Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
@@ -583,6 +650,19 @@ int main() {
 
     // Main loop
     do {
+=======
+    // East and West Walls
+    WindowWall wall(30,25,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
+    Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
+
+        
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide and capture mouse cursor
+    glfwSetCursorPosCallback(window, mouse_callback); // Register the callback function
+
+    // Main loop
+    do {
+        
+>>>>>>> ee422df (placed walls and roof)
         // Per-frame time logic
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -620,6 +700,7 @@ int main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+<<<<<<< HEAD
         // --- Render Carpet ---
         const float CARPET_SCALE = 0.25f;
         const float CARPET_Y_POSITION = 12.0f; // Common Y position for all carpets (assuming flat on floor)
@@ -679,6 +760,21 @@ int main() {
                 }
             }
         }
+=======
+        // // --- Render Carpet ---
+        // if (!carpet_materialGroups.empty()) {
+        //     glm::mat4 carpetModel = glm::mat4(1.0f);
+        //     carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
+        //     carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, -10.0f, 0.0f)); // Adjust position
+        //     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
+        //     for (const auto& group : carpet_materialGroups) {
+        //         GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+        //         glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+        //         glBindVertexArray(group.VAO);
+        //         glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+        //     }
+        // }
+>>>>>>> ee422df (placed walls and roof)
 
 
         // --- Render Roof ---
@@ -746,17 +842,30 @@ int main() {
                 glBindVertexArray(group.VAO);
                 glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
+<<<<<<< HEAD
         }
 
         // Render all furniture
         for (const auto& furniture : furnitureCollection) {
             furniture.render(shaderProgram);
+=======
+>>>>>>> ee422df (placed walls and roof)
         }
 
+        // // Render all furniture
+        // for (const auto& furniture : furnitureCollection) {
+        //     furniture.render(shaderProgram);
+        // }
+
         //Render East and West Walls
+<<<<<<< HEAD
         // wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
         // westWall.draw(view, projection, shaderProgram);
         //westWall.draw(view, projection, shaderProgram);
+=======
+        wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
+        // westWall.draw(view, projection, shaderProgram);
+>>>>>>> ee422df (placed walls and roof)
 
         glfwSwapBuffers(window);
         glfwPollEvents();
