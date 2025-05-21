@@ -47,6 +47,11 @@ float lastFrame = 0.0f; // Time of last frame
 //     GLsizei vertexCount;
 //     glm::vec3 color;
 // };
+// struct MaterialGroup {
+//     GLuint VAO, VBO;
+//     GLsizei vertexCount;
+//     glm::vec3 color;
+// };
 
 const char *getError() {
     const char *errorDescription;
@@ -175,6 +180,38 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     cameraFront = glm::normalize(front);
 }
 
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to top
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f; // Adjust this value for mouse sensitivity
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yawM += xoffset;
+    pitchM += yoffset;
+
+    // Constrain pitchM to avoid flipping the camera
+    if (pitchM > 89.0f)
+        pitchM = 89.0f;
+    if (pitchM < -89.0f)
+        pitchM = -89.0f;\
+    glm::vec3 front;
+    front.x = cos(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    front.y = sin(glm::radians(pitchM));
+    front.z = sin(glm::radians(yawM)) * cos(glm::radians(pitchM));
+    cameraFront = glm::normalize(front);
+}
+
 // Your MaterialGroup definition
 struct MaterialGroup {
     GLuint VAO;
@@ -188,9 +225,6 @@ struct InterleavedVertex {
     float nx, ny, nz;  // Normal
 };
 
-=======
-// Function to load object files and create material groups
->>>>>>> ee422df (placed walls and roof)
 std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyobj::ObjReaderConfig& config) {
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(filename, config)) {
@@ -198,9 +232,15 @@ std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyo
         return {};
     }
 
+
     if (!reader.Warning().empty()) {
         std::cout << "TinyObjReader warning (" << filename << "): " << reader.Warning() << std::endl;
     }
+
+    const auto& attrib = reader.GetAttrib();
+    const auto& shapes = reader.GetShapes();
+    const auto& materials = reader.GetMaterials();
+
 
     const auto& attrib = reader.GetAttrib();
     const auto& shapes = reader.GetShapes();
@@ -212,8 +252,15 @@ std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyo
         std::unordered_map<int, std::vector<InterleavedVertex>> materialVertexMap;
 
         size_t index_offset = 0;
+
+    for (const auto& shape : shapes) {
+        std::unordered_map<int, std::vector<InterleavedVertex>> materialVertexMap;
+
+        size_t index_offset = 0;
         for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); ++f) {
             int fv = shape.mesh.num_face_vertices[f];
+            int mat_id = shape.mesh.material_ids[f];
+
             int mat_id = shape.mesh.material_ids[f];
 
             for (size_t v = 0; v < fv; ++v) {
@@ -233,18 +280,42 @@ std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyo
                 }
 
                 materialVertexMap[mat_id].push_back(vertex);
+                tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+
+                InterleavedVertex vertex;
+                vertex.px = attrib.vertices[3 * idx.vertex_index + 0];
+                vertex.py = attrib.vertices[3 * idx.vertex_index + 1];
+                vertex.pz = attrib.vertices[3 * idx.vertex_index + 2];
+
+                if (!attrib.normals.empty() && idx.normal_index >= 0) {
+                    vertex.nx = attrib.normals[3 * idx.normal_index + 0];
+                    vertex.ny = attrib.normals[3 * idx.normal_index + 1];
+                    vertex.nz = attrib.normals[3 * idx.normal_index + 2];
+                } else {
+                    vertex.nx = 0.0f; vertex.ny = 0.0f; vertex.nz = 1.0f; // fallback
+                }
+
+                materialVertexMap[mat_id].push_back(vertex);
             }
 
             index_offset += fv;
+
+            index_offset += fv;
         }
+
 
         for (const auto& [mat_id, verts] : materialVertexMap) {
             GLuint VAO, VBO;
             glGenVertexArrays(1, &VAO);
             glGenBuffers(1, &VBO);
 
+
             glBindVertexArray(VAO);
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(InterleavedVertex), verts.data(), GL_STATIC_DRAW);
+
+            // Position: location 0
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(InterleavedVertex), (void*)0);
             glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(InterleavedVertex), verts.data(), GL_STATIC_DRAW);
 
             // Position: location 0
@@ -257,14 +328,26 @@ std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyo
 
             // Color from material or default
             glm::vec3 color(0.8f); // default
+
+            // Normal: location 1
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(InterleavedVertex), (void*)(3 * sizeof(float)));
+            glEnableVertexAttribArray(1);
+
+            // Color from material or default
+            glm::vec3 color(0.8f); // default
             if (mat_id >= 0 && mat_id < (int)materials.size()) {
+                const auto& m = materials[mat_id];
+                color = glm::vec3(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
                 const auto& m = materials[mat_id];
                 color = glm::vec3(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
             }
 
             materialGroups.push_back({ VAO, VBO, static_cast<GLsizei>(verts.size()), color });
+
+            materialGroups.push_back({ VAO, VBO, static_cast<GLsizei>(verts.size()), color });
         }
     }
+
 
     return materialGroups;
 }
@@ -658,6 +741,7 @@ int main() {
         
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide and capture mouse cursor
     glfwSetCursorPosCallback(window, mouse_callback); // Register the callback function
+    LightingManager light;
 
     // Main loop
     do {
@@ -690,6 +774,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shaderProgram);
+        light.upload(shaderProgram);
         light.upload(shaderProgram);
 
         // Set up matrices uniforms
