@@ -785,82 +785,45 @@ int main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-<<<<<<< HEAD
         // --- Render Carpet ---
-        const float CARPET_SCALE = 0.25f;
-        const float CARPET_Y_POSITION = 12.0f; // Common Y position for all carpets (assuming flat on floor)
-        const float CARPET_ROTATION_Y = 270.0f; // Common rotation for all carpets
-
-        const int numRows = 12;
-        const float zOffset = 14.0f;
-        const float initialZ = -90.0f;
-
-        // Fixed X positions for left, middle, right carpets
-        std::vector<float> xPositions = { -34.0f, -10.0f, 12.5f };
-
-        // Carpet data in order 0, 1, 2
-        std::vector<std::vector<MaterialGroup>> carpetGroups = {
-            carpet0_materialGroups,
-            carpet1_materialGroups,
-            carpet2_materialGroups
-        };
-
-        // All 6 permutations of 3 carpets
-        std::vector<std::vector<int>> carpetPatterns = {
-            {0, 1, 2},
-            {2, 1, 0},
-            {1, 0, 2},
-            {2, 0, 1},
-            {1, 2, 0},
-            {0, 2, 1}
-        };
-
-        for (int i = 0; i < numRows; ++i) {
-            const std::vector<int>& pattern = carpetPatterns[i % carpetPatterns.size()];
-
-            for (int j = 0; j < 3; ++j) {
-                int carpetIndex = pattern[j];
-                float x = xPositions[j];
-                float z = 0.0f;
-
-                if(carpetIndex == 0)
-                    z = initialZ + (i * zOffset);
-                else
-                    z = initialZ-0.6f + (i * zOffset);
-
-                const auto& groups = carpetGroups[carpetIndex];
-                if (groups.empty()) continue;
-
-                glm::mat4 carpetModel = glm::mat4(1.0f);
-                carpetModel = glm::scale(carpetModel, glm::vec3(CARPET_SCALE));
-                carpetModel = glm::translate(carpetModel, glm::vec3(x, CARPET_Y_POSITION, z));
-                carpetModel = glm::rotate(carpetModel, glm::radians(CARPET_ROTATION_Y), glm::vec3(0.0f, 1.0f, 0.0f));
-
-                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
-                for (const auto& group : groups) {
-                    GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 0.5f);
-                    glBindVertexArray(group.VAO);
-                    glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
-                }
+        if (!carpet0_materialGroups.empty()) {
+            glm::mat4 carpetModel = glm::mat4(1.0f);
+            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
+            carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, 50.0f, 0.0f)); // Adjust position
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
+            for (const auto& group : carpet0_materialGroups) {
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
         }
-=======
-        // // --- Render Carpet ---
-        // if (!carpet_materialGroups.empty()) {
-        //     glm::mat4 carpetModel = glm::mat4(1.0f);
-        //     carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
-        //     carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, -10.0f, 0.0f)); // Adjust position
-        //     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
-        //     for (const auto& group : carpet_materialGroups) {
-        //         GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-        //         glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
-        //         glBindVertexArray(group.VAO);
-        //         glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
-        //     }
-        // }
->>>>>>> ee422df (placed walls and roof)
 
+        if (!carpet1_materialGroups.empty()) {
+            glm::mat4 carpetModel = glm::mat4(1.0f);
+            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
+            carpetModel = glm::translate(carpetModel, glm::vec3(-15.0f, 50.0f, 0.0f)); // Adjust position
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
+            for (const auto& group : carpet1_materialGroups) {
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+            }
+        }
+
+        if (!carpet2_materialGroups.empty()) {
+            glm::mat4 carpetModel = glm::mat4(1.0f);
+            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f)); // Adjust scale
+            carpetModel = glm::translate(carpetModel, glm::vec3(-30.0f, 50.0f, 0.0f)); // Adjust position
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
+            for (const auto& group : carpet2_materialGroups) {
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+            }
+        }
 
         // --- Render Roof ---
         if (!roof_materialGroups.empty()) {
@@ -965,6 +928,15 @@ int main() {
         }
     }
     // Cleanup for room objects
+    for (const auto& group : carpet0_materialGroups) {
+        glDeleteVertexArrays(1, &group.VAO);
+        glDeleteBuffers(1, &group.VBO);
+    }
+    for (const auto& group : carpet1_materialGroups) {
+        glDeleteVertexArrays(1, &group.VAO);
+        glDeleteBuffers(1, &group.VBO);
+    }
+    for (const auto& group : carpet2_materialGroups) {
     for (const auto& group : carpet0_materialGroups) {
         glDeleteVertexArrays(1, &group.VAO);
         glDeleteBuffers(1, &group.VBO);
