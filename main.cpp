@@ -259,7 +259,7 @@ int main() {
     }
     
     // 5-7. Loading LCouch (3 instances - 2 connected, 1 separate)
-    auto lcouch_materialGroups = loadObjModel("Objects/Lcouch.obj", reader_config);
+    auto lcouch_materialGroups = loadObjModel("Objects/LCouch.obj", reader_config);
     if (!lcouch_materialGroups.empty()) {
         // First LCouch (part of connected pair)
         furnitureCollection.push_back({
@@ -288,21 +288,30 @@ int main() {
     
     // 8-12. Loading Ornaments (5 instances)
     auto ornament_materialGroups = loadObjModel("Objects/Ornament.obj", reader_config);
-    if (!ornament_materialGroups.empty()) {
-        float startZ = 13.0f; // Southmost position
-        float spacing = 6.0f; // Spacing between ornaments
-        float ornamentX = -22.0f; // Further left position
+    auto cutoffs_materialGroups = loadObjModel("Objects/cutoffs.obj", reader_config); // Load the cutoffs model
 
-        for (int i = 0; i < 4; ++i) {
-            furnitureCollection.push_back({
-                ornament_materialGroups,
-                glm::vec3(ornamentX, groundLevel, startZ - (i * spacing)), // Consistent X, varying Z
-                glm::vec3(0.0f, 0.0f, 0.0f),                             // Rotation
-                glm::vec3(1.0f)                                          // Scale
-            });
-        }
-    }
-    // 13-14. Loading Dividers (2 instances)
+if (!ornament_materialGroups.empty()) {
+float startZ = 13.0f; // Southmost position
+float spacing = 6.0f; // Spacing between ornaments
+float ornamentX = -22.0f; // Further left position
+        float cutoffOffset = spacing / 2.0f; // Halfway between ornaments
+
+ for (int i = 0; i < 4; ++i) {
+furnitureCollection.push_back({
+ ornament_materialGroups,
+glm::vec3(ornamentX, groundLevel, startZ - (i * spacing)), // Consistent X, varying Z
+glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f)});
+            
+            // Add cutoffs between ornaments
+            if (i < 3 && !cutoffs_materialGroups.empty()) { // Add 3 cutoffs between 4 ornaments
+                furnitureCollection.push_back({
+                    cutoffs_materialGroups,
+                    glm::vec3(ornamentX+2.0f, groundLevel, startZ - (i * spacing) + cutoffOffset+2.5f), // Position halfway
+                    glm::vec3(0.0f, 180.0f, 0.0f), // Rotation
+                    glm::vec3(1.0f) // Scale
+                });
+            }
+}} // 13-14. Loading Dividers (2 instances)
     auto divider_materialGroups = loadObjModel("Objects/divider.obj", reader_config);
     if (!divider_materialGroups.empty()) {
         // Divider 1
