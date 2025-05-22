@@ -519,6 +519,9 @@ int main() {
 
     LightingManager light;
 
+    // Load Drone 
+    std::vector<MaterialGroup> drone_materialGroups = loadObjModel("Objects/drone.obj", reader_config);
+
     // Main loop
     do {
         glfwPollEvents();
@@ -614,6 +617,20 @@ int main() {
         //Render East and West Walls
         wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
         //westWall.draw(view, projection, shaderProgram);
+
+        // --- Render Drone ---
+        if (!drone_materialGroups.empty()) {
+            glm::mat4 droneModel = glm::mat4(1.0f);
+            droneModel = glm::scale(droneModel, glm::vec3(0.3f)); // Adjust scale
+            droneModel = glm::translate(droneModel, glm::vec3(0.0f, 30.0f, 0.0f)); // Adjust position
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
+            for (const auto& group : drone_materialGroups) {
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+            }
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
