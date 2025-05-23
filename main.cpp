@@ -77,7 +77,7 @@ inline GLFWwindow *setUp() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow *window = glfwCreateWindow(1400, 1000, "Room Furniture Layout", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(1400, 1000, "IT Kiosk", NULL, NULL);
     if (window == NULL) {
         cout << getError() << endl;
         glfwTerminate();
