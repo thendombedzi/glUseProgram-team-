@@ -15,7 +15,6 @@
 #include "Objects/EastWall/WindowWall.hpp"
 #include "Objects/WestWall/Wall.hpp"
 #include "lightingManager.hpp"
-#include "lightingManager.hpp"
 
 using namespace glm;
 using namespace std;
@@ -88,53 +87,6 @@ inline GLFWwindow *setUp() {
     glfwMakeContextCurrent(window);
     startUpGLEW();
     return window;
-}
-
-<<<<<<< HEAD
-// Your MaterialGroup definition
-struct MaterialGroup {
-    GLuint VAO;
-    GLuint VBO;
-    GLsizei vertexCount;
-    glm::vec3 color;
-};
-
-struct InterleavedVertex {
-    float px, py, pz;  // Position
-    float nx, ny, nz;  // Normal
-};
-
-=======
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to top
-    lastX = xpos;
-    lastY = ypos;
-
-    float sensitivity = 0.1f; // Adjust this value for mouse sensitivity
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yawM += xoffset;
-    pitchM += yoffset;
-
-    // Constrain pitchM to avoid flipping the camera
-    if (pitchM > 89.0f)
-        pitchM = 89.0f;
-    if (pitchM < -89.0f)
-        pitchM = -89.0f;\
-    glm::vec3 front;
-    front.x = cos(glm::radians(yawM)) * cos(glm::radians(pitchM));
-    front.y = sin(glm::radians(pitchM));
-    front.z = sin(glm::radians(yawM)) * cos(glm::radians(pitchM));
-    cameraFront = glm::normalize(front);
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -613,9 +565,6 @@ int main() {
     std::vector<MaterialGroup> carpet0_materialGroups = loadObjModel("carpet_0.obj", reader_config);
     std::vector<MaterialGroup> carpet1_materialGroups = loadObjModel("carpet_1.obj", reader_config);
     std::vector<MaterialGroup> carpet2_materialGroups = loadObjModel("carpet_2.obj", reader_config);
-    std::vector<MaterialGroup> carpet0_materialGroups = loadObjModel("carpet_0.obj", reader_config);
-    std::vector<MaterialGroup> carpet1_materialGroups = loadObjModel("carpet_1.obj", reader_config);
-    std::vector<MaterialGroup> carpet2_materialGroups = loadObjModel("carpet_2.obj", reader_config);
 
     // Load Roof
     std::vector<MaterialGroup> roof_materialGroups = loadObjModel("alt_panels.obj", reader_config);
@@ -624,12 +573,6 @@ int main() {
     std::vector<MaterialGroup> northwall_materialGroups = loadObjModel("N_SWall.obj", reader_config);
 
 
-<<<<<<< HEAD
-    WindowWall wall(8,8,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
-    Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
-
-    LightingManager light;
-=======
     // East and West Walls
     WindowWall wall(30,25,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
     Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
