@@ -773,7 +773,7 @@ int main() {
 
         // --- Render Carpet ---
         const float CARPET_SCALE = 0.25f;
-        const float CARPET_Y_POSITION = 8.0f; // Common Y position for all carpets (assuming flat on floor)
+        const float CARPET_Y_POSITION = 12.0f; // Common Y position for all carpets (assuming flat on floor)
         const float CARPET_ROTATION_Y = 270.0f; // Common rotation for all carpets
 
         const int numRows = 12;
@@ -824,7 +824,7 @@ int main() {
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
                 for (const auto& group : groups) {
                     GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 0.5f);
                     glBindVertexArray(group.VAO);
                     glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
                 }
@@ -907,10 +907,10 @@ int main() {
 >>>>>>> ee422df (placed walls and roof)
         }
 
-        // // Render all furniture
-        // for (const auto& furniture : furnitureCollection) {
-        //     furniture.render(shaderProgram);
-        // }
+        // Render all furniture
+        for (const auto& furniture : furnitureCollection) {
+            furniture.render(shaderProgram);
+        }
 
         //Render East and West Walls
         // wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
