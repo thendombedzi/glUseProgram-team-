@@ -1,0 +1,25 @@
+# Blender 4.4.3 MTL File: 'Untitled.blend'
+# www.blender.org
+
+newmtl glass.001
+Ns 1000.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.464331 0.800165 0.800165
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 0.500000
+illum 9
+
+newmtl steel
+Ns 159.999985
+Ka 1.000000 1.000000 1.000000
+Kd 0.250879 0.250879 0.250879
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd my_diffuse_texture.png  # <--- This line is crucial for diffuse textures
+map_Bump my_normal_map.png    # Optional: for normal maps
+map_Ks my_specular_texture.png

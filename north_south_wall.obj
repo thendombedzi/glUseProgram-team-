@@ -1,6 +1,6 @@
 # Blender 4.4.1
 # www.blender.org
-mtllib N_SWall.mtl
+mtllib north_south_wall.mtl
 g Cube.022_Mesh
 v -10.006154 6.001159 -36.167248
 v -9.896749 39.371944 -36.908760
