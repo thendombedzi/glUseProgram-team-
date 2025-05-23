@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include "shader.hpp"
 #include "tiny_obj_loader.h"
@@ -189,6 +190,12 @@ struct Furniture {
     }
 };
 
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+glm::vec3 dronePosition = glm::vec3(0.0f, 30.0f, 0.0f);
+float droneYaw = 0.0f;   // rotation around Y axis
+float dronePitch = 0.0f; // rotation around X axis
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 int main() {
     GLFWwindow *window;
     try {
@@ -206,11 +213,11 @@ int main() {
     shaderProgram = LoadShaders("vertexShader.glsl", "fragmentShader.glsl");
 
     // Set camera to view the entire room and furniture
-    view = glm::lookAt(
-        glm::vec3(20.0f, 15.0f, 20.0f), // Position further back and higher to see full room
-        glm::vec3(0.0f, 0.0f, 0.0f),    // Look at the origin
-        glm::vec3(0.0f, 1.0f, 0.0f)
-    );
+    // view = glm::lookAt(
+    //     glm::vec3(20.0f, 15.0f, 20.0f), // Position further back and higher to see full room
+    //     glm::vec3(0.0f, 0.0f, 0.0f),    // Look at the origin
+    //     glm::vec3(0.0f, 1.0f, 0.0f)
+    // );
 
     // Set projection matrix
     int width, height;
@@ -519,12 +526,58 @@ int main() {
 
     LightingManager light;
 
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Load Drone 
     std::vector<MaterialGroup> drone_materialGroups = loadObjModel("Objects/drone.obj", reader_config);
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Main loop
     do {
-        glfwPollEvents();
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        float speed = 1.0f;
+        glm::vec3 direction;
+        direction.x = cos(glm::radians(droneYaw)) * cos(glm::radians(dronePitch));
+        direction.y = sin(glm::radians(dronePitch));
+        direction.z = sin(glm::radians(droneYaw)) * cos(glm::radians(dronePitch));
+        direction = glm::normalize(direction);
+
+        glm::vec3 right = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
+        glm::vec3 up(0.0f, 1.0f, 0.0f); 
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            dronePosition += direction * speed;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            dronePosition -= direction * speed;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            dronePosition -= right * speed;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            dronePosition += right * speed;
+
+        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+            dronePosition += up * speed;           
+        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+            dronePosition -= up * speed;          
+
+        glm::vec3 cameraOffset = -direction * 1.5f + glm::vec3(1.2f, 1.2f, 0.0f); // behind and slightly above
+        glm::vec3 cameraPosition = dronePosition + cameraOffset;
+        view = glm::lookAt(
+            cameraPosition,
+            dronePosition + direction, // look at where the drone is going
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+
+        // view = glm::lookAt(
+        //     dronePosition,
+        //     dronePosition + direction,
+        //     glm::vec3(0.0f, 1.0f, 0.0f)
+        // );
+
+        // droneModel = glm::rotate(droneModel, glm::radians(-droneYaw), glm::vec3(0.0f, 1.0f, 0.0f));
+        // droneModel = glm::rotate(droneModel, glm::radians(dronePitch), glm::vec3(1.0f, 0.0f, 0.0f));
+
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+        // glfwPollEvents();
 
         glClearColor(0.678f, 0.847f, 0.902f, 1.0f); // background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -584,7 +637,7 @@ int main() {
         if (!roof_materialGroups.empty()) {
             glm::mat4 roofModel = glm::mat4(1.0f);
             roofModel = glm::scale(roofModel, glm::vec3(0.15f)); // Adjust scale
-            roofModel = glm::translate(roofModel, glm::vec3(0.0f, 10.0f, 0.0f)); // Adjust position
+            roofModel = glm::translate(roofModel, glm::vec3(20.0f, 50.0f, 0.0f)); // Adjust position
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(roofModel));
             for (const auto& group : roof_materialGroups) {
                 GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
@@ -618,11 +671,12 @@ int main() {
         wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
         //westWall.draw(view, projection, shaderProgram);
 
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Render Drone ---
         if (!drone_materialGroups.empty()) {
             glm::mat4 droneModel = glm::mat4(1.0f);
-            droneModel = glm::scale(droneModel, glm::vec3(0.3f)); // Adjust scale
-            droneModel = glm::translate(droneModel, glm::vec3(0.0f, 30.0f, 0.0f)); // Adjust position
+            droneModel = glm::translate(droneModel, dronePosition); // Adjust position
+            droneModel = glm::scale(droneModel, glm::vec3(0.1f)); // Adjust scale
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
             for (const auto& group : drone_materialGroups) {
                 GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
@@ -631,6 +685,7 @@ int main() {
                 glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
         }
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
         glfwSwapBuffers(window);
         glfwPollEvents();
