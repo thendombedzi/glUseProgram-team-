@@ -13,8 +13,8 @@
 
 #include "shader.hpp"
 #include "tiny_obj_loader.h"
-#include "Objects/EastWall/WindowWall.hpp"
-#include "Objects/WestWall/Wall.hpp"
+#include "objects/EastWall/WindowWall.hpp"
+#include "objects/WestWall/Wall.hpp"
 #include "lightingManager.hpp"
 
 using namespace glm;
@@ -253,7 +253,6 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
-    // Load shaders (assuming "vertex_shader.glsl" and "fragment_shader.glsl" are correct for both objects)
     shaderProgram = LoadShaders("vertexShader.glsl", "fragmentShader.glsl");
 
     // Set camera to view the entire room and furniture
@@ -275,45 +274,46 @@ int main() {
     
     // Create a collection of furniture
     std::vector<Furniture> furnitureCollection;
-    float groundLevel = 3.3f; // Set the common ground level for all furniture
-    
-    // 1-2. Loading Blue Carpet (2 instances)
-    // auto blue_materialGroups = loadObjModel("Objects/blue.obj", reader_config);
-    // if (!blue_materialGroups.empty()) {
-    //     // First blue carpet
-    //     furnitureCollection.push_back({
-    //          blue_materialGroups,
-    //         glm::vec3(7.0f, groundLevel, 12.0f), // Position
-    //         glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-    //         glm::vec3(1.0f)                      // Scale
-    //     });
-        
-    //     // Second blue carpet
-    //     furnitureCollection.push_back({
-    //          blue_materialGroups,
-    //         glm::vec3(6.0f, groundLevel, 14.0f),  // Position
-    //         glm::vec3(0.0f, 0.0f, 0.0f),        // Rotation
-    //         glm::vec3(1.0f)                      // Scale
-    //     });
-    // }
-    
-    // // 3-4. Loading Yellow (2 instances)
-    // auto yellow_materialGroups = loadObjModel("Objects/yellow.obj", reader_config);
-    // if (!yellow_materialGroups.empty()) {
-    //     // First yellow
-    //     furnitureCollection.push_back({
-    //          yellow_materialGroups,
-    //         glm::vec3(4.0f, groundLevel, 16.0f), // Position
-    //         glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-    //         glm::vec3(1.0f)                        // Scale
-    //     });
-        
-       
-    // }
-    
-    // 5-7. Loading LCouch (3 instances - 2 connected, 1 separate)
-    auto lcouch_materialGroups = loadObjModel("Objects/Lcouch.obj", reader_config);
+    float groundLevel = 3.5f; // Common ground level for all furniture
+ 
+    // Cutouts and tables near them
+    auto ornament_materialGroups = loadObjModel("objects/Ornament.obj", reader_config);
+    auto cutoffs_materialGroups = loadObjModel("objects/cutoffs.obj", reader_config);
+
+    if (!ornament_materialGroups.empty())
+    {
+        float startZ = 16.0f;               
+        float spacing = 6.0f;               
+        float ornamentX = -14.5f;            
+        float cutoffOffset = -9.0f; 
+
+        for (int i = 0; i < 5; ++i)
+        {
+            furnitureCollection.push_back({ornament_materialGroups, glm::vec3(ornamentX, groundLevel, startZ - (i * spacing)),glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.8f)});
+
+            // Add cutoffs between ornaments
+            if (i < 4 && !cutoffs_materialGroups.empty())
+            { // Add 5 cutoffs between 6 ornaments
+                furnitureCollection.push_back({
+                    cutoffs_materialGroups,
+                    glm::vec3(ornamentX + 2.0f, groundLevel, startZ + (i*spacing) + cutoffOffset), // Position halfway
+                    glm::vec3(0.0f, 180.0f, 0.0f),                                                          // Rotation
+                    glm::vec3(0.7f, 0.7f, 1.2f)                                                                         // Scale
+                });
+            }
+        }
+    } 
+
+    auto lcouch_materialGroups = loadObjModel("objects/Lcouch.obj", reader_config);
     if (!lcouch_materialGroups.empty()) {
+
+        furnitureCollection.push_back({
+            lcouch_materialGroups,
+            glm::vec3(-4.0f, groundLevel, -12.0f), // Position
+            glm::vec3(0.0f, 270.0f, 0.0f),         // Rotation
+            glm::vec3(0.7f)                      // Scale
+        });
+
         // First LCouch (part of connected pair)
         furnitureCollection.push_back({
              lcouch_materialGroups,
@@ -339,63 +339,21 @@ int main() {
         });
     }
     
-    // 8-12. Loading Ornaments (5 instances)
-    auto ornament_materialGroups = loadObjModel("Objects/Ornament.obj", reader_config);
-    // if (!ornament_materialGroups.empty()) {
-    //     float startZ = 13.0f; // Southmost position
-    //     float spacing = 5.0f; // Spacing between ornaments
-    //     float ornamentX = -14.0f; // Further left position
-
-    //     for (int i = 0; i < 4; ++i) {
-    //         furnitureCollection.push_back({
-    //             ornament_materialGroups,
-    //             glm::vec3(ornamentX, groundLevel, startZ - (i * spacing)), // Consistent X, varying Z
-    //             glm::vec3(0.0f, 0.0f, 0.0f),                             // Rotation
-    //             glm::vec3(0.8f)                                          // Scale
-    //         });
-    //     }
-    // }
-
-    auto cutoffs_materialGroups = loadObjModel("Objects/cutoffs.obj", reader_config); // Load the cutoffs model
-
-    if (!ornament_materialGroups.empty())
-    {
-        float startZ = 14.0f;                // Southmost position
-        float spacing = 5.0f;                // Spacing between ornaments
-        float ornamentX = -14.5f;            // Further left position
-        float cutoffOffset = spacing / 2.0f; // Halfway between ornaments
-
-        for (int i = 0; i < 6; ++i)
-        {
-            furnitureCollection.push_back({ornament_materialGroups, glm::vec3(ornamentX, groundLevel, startZ - (i * spacing)),glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.8f)});
-
-            // Add cutoffs between ornaments
-            if (i < 5  && !cutoffs_materialGroups.empty())
-            { // Add 5 cutoffs between 6 ornaments
-                furnitureCollection.push_back({
-                    cutoffs_materialGroups,
-                    glm::vec3(ornamentX + 2.0f, groundLevel, startZ - (i * spacing) + cutoffOffset + 2.5f), // Position halfway
-                    glm::vec3(0.0f, 180.0f, 0.0f),                                                          // Rotation
-                    glm::vec3(0.8f, 0.8f, 1.2f)                                                                         // Scale
-                });
-            }
-        }
-    } 
 
     // 13-14. Loading Dividers (2 instances)
-    auto divider_materialGroups = loadObjModel("Objects/divider.obj", reader_config);
+    auto divider_materialGroups = loadObjModel("objects/divider.obj", reader_config);
     if (!divider_materialGroups.empty()) {
 
         furnitureCollection.push_back({
             divider_materialGroups,
-            glm::vec3(-0.8f, groundLevel, -16.3f),   // Position (top side of cubic couch)
+            glm::vec3(-0.8f, groundLevel, -14.0f),   // Position (top side of cubic couch)
             glm::vec3(0.0f, 90.0f, 0.0f),          // Rotation
             glm::vec3(0.7f)                       // Scale
         });
         // Divider 1
         furnitureCollection.push_back({
             divider_materialGroups,
-            glm::vec3(-0.8f, groundLevel, -13.3f),   // Position (top side of cubic couch)
+            glm::vec3(-0.8f, groundLevel, -8.0f),   // Position (top side of cubic couch)
             glm::vec3(0.0f, 90.0f, 0.0f),          // Rotation
             glm::vec3(0.7f)                       // Scale
         });
@@ -417,42 +375,56 @@ int main() {
     }
     
     // 15-16. Loading CubicCouch (2 instances)
-    auto cubicCouch_materialGroups = loadObjModel("Objects/cubicCouch.obj", reader_config);
+    auto cubicCouch_materialGroups = loadObjModel("objects/cubicCouch.obj", reader_config);
     if (!cubicCouch_materialGroups.empty()) {
-         furnitureCollection.push_back({
+        furnitureCollection.push_back({
             cubicCouch_materialGroups,
-            glm::vec3(1.8f, groundLevel, 0.0f),   // Position
-            glm::vec3(0.0f, 90.0f, 0.0f),         // Rotation
-            glm::vec3(0.7f, 0.7f, 0.7f)                      // Scale
+            glm::vec3(1.8f, groundLevel, 0.0f),   
+            glm::vec3(0.0f, 90.0f, 0.0f),         
+            glm::vec3(0.7f, 0.7f, 0.7f)                      
+        });
+
+        furnitureCollection.push_back({
+            cubicCouch_materialGroups,
+            glm::vec3(6.0f, groundLevel, -26.0f),   
+            glm::vec3(0.0f, 90.0f, 0.0f),         
+            glm::vec3(0.7f, 0.7f, 0.7f)                      
         });
     }
     
     // 17-20. Loading Small Tables (4 instances)
-    auto smallTable_materialGroups = loadObjModel("Objects/smallTable.obj", reader_config);
+    auto smallTable_materialGroups = loadObjModel("objects/smallTable.obj", reader_config);
     if (!smallTable_materialGroups.empty()) {
         // Small Table 1
         furnitureCollection.push_back({
             smallTable_materialGroups,
-            glm::vec3(-2.0f, groundLevel, -20.0f),   // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(0.5f)                      // Scale
+            glm::vec3(-4.0f, groundLevel, 8.0f),   
+            glm::vec3(0.0f, 0.0f, 0.0f),         
+            glm::vec3(0.5f)                      
+        });
+
+        furnitureCollection.push_back({
+            smallTable_materialGroups,
+            glm::vec3(-3.8f, groundLevel, 6.0f),   
+            glm::vec3(0.0f, 0.0f, 0.0f),         
+            glm::vec3(0.5f)                      
         });
     }
        
     // 21-24. Loading Tall Tables (4 instances - 2 pairs that are close to each other)
-    auto tallTable_materialGroups = loadObjModel("Objects/tallTable.obj", reader_config);
+    auto tallTable_materialGroups = loadObjModel("objects/tallTable.obj", reader_config);
     if (!tallTable_materialGroups.empty()) {
         furnitureCollection.push_back({
             tallTable_materialGroups,
-            glm::vec3(-2.0f, groundLevel, 12.0f),  // Moved further south (positive Z)
-            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(0.7f)                      // Scale
+            glm::vec3(-2.0f, groundLevel, 12.0f),  
+            glm::vec3(0.0f, 0.0f, 0.0f),         
+            glm::vec3(0.7f)                      
         });
         
         // Tall Table 2 (south, spaced from first)
         furnitureCollection.push_back({
             tallTable_materialGroups,
-            glm::vec3(0.0f, groundLevel, 12.0f),  // Moved further south (positive Z), spaced
+            glm::vec3(-1.8f, groundLevel, 12.0f),  // Moved further south (positive Z), spaced
             glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(0.7f)                      // Scale
         });
@@ -471,7 +443,7 @@ int main() {
         glm::vec3(0.7f)          
     });
     }
-    //     auto potPlant_materialGroups = loadObjModel("Objects/potPlant.obj", reader_config);
+    //     auto potPlant_materialGroups = loadObjModel("objects/potPlant.obj", reader_config);
     // if (!potPlant_materialGroups.empty()) {
     //     // Short Table 1 (north)
     //     furnitureCollection.push_back({
@@ -482,41 +454,40 @@ int main() {
     //     });}
     
     // 25-26. Loading Short Tables (2 instances)
-    auto shortTable_materialGroups = loadObjModel("Objects/shortTable.obj", reader_config);
+    auto shortTable_materialGroups = loadObjModel("objects/shortTable.obj", reader_config);
     if (!shortTable_materialGroups.empty()) {
         // Short Table 1
         furnitureCollection.push_back({
-              shortTable_materialGroups,
-            glm::vec3(-4.0f, groundLevel, -16.0f),  // Moved even further north (negative Z)
-            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(0.7f)                      // Scale
+            shortTable_materialGroups,
+            glm::vec3(-4.0f, groundLevel, -16.0f),  
+            glm::vec3(0.0f, 0.0f, 0.0f),         
+            glm::vec3(0.6f)                      
         });
         
-        // Short Table 2
+        // // Short Table 2
         furnitureCollection.push_back({
              shortTable_materialGroups,
-            glm::vec3(2.0f, groundLevel, -13.0f),   // Moved even further north (negative Z)
-            glm::vec3(0.0f, 90.0f, 0.0f),        // Rotation
-            glm::vec3(0.7f)                      // Scale
+            glm::vec3(-3.0f, groundLevel, -16.0f),   
+            glm::vec3(0.0f, 90.0f, 0.0f),        
+            glm::vec3(0.6f)                      
         });
     }
     
-    // 27-30. Loading Comfortable Chairs (4 instances)
-    auto comfortableChair_materialGroups = loadObjModel("Objects/comfortableChair.obj", reader_config);
+    auto comfortableChair_materialGroups = loadObjModel("objects/comfortableChair.obj", reader_config);
     if (!comfortableChair_materialGroups.empty()) {
         // Near Short Table 1
         // Chair 1
         furnitureCollection.push_back({
            comfortableChair_materialGroups,
-            glm::vec3(-3.0f, groundLevel, -20.0f), // Position closer to table, facing table
-            glm::vec3(0.0f, 180.0f, 0.0f),        // Rotate to face north (towards table)
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(-1.0f, groundLevel, -14.0f), 
+            glm::vec3(0.0f, 180.0f, 0.0f),        
+            glm::vec3(0.7f)                      
         });
         
         // Chair 2
         furnitureCollection.push_back({
              comfortableChair_materialGroups,
-            glm::vec3(-9.5f, groundLevel, -20.0f),  // Position closer to table, facing table
+            glm::vec3(-2.0f, groundLevel, -14.0f),  // Position closer to table, facing table
             glm::vec3(0.0f, 0.0f, 0.0f),          // Rotate to face south (towards table)
             glm::vec3(1.0f)                      // Scale
         });
@@ -539,60 +510,129 @@ int main() {
         });
 
 
-    auto bigTable_materialGroups = loadObjModel("Objects/BigTable.obj", reader_config);
-    if (!bigTable_materialGroups.empty()) {
-        float bigTableZ = 0.0f; 
-        float bigTableX = 0.0f; 
+    auto bigTable_materialGroups = loadObjModel("objects/BigTable.obj", reader_config);
+    auto blue_materialGroups = loadObjModel("objects/blue.obj", reader_config);
+    auto yellow_materialGroups = loadObjModel("objects/yellow.obj", reader_config);
 
+    if (!bigTable_materialGroups.empty()) {
+
+        float bigTableZ = -2.0f; 
+        float bigTableX = -1.0f; 
+
+        //Big Table 1
         furnitureCollection.push_back({
             bigTable_materialGroups,
-            glm::vec3(bigTableX-6.0f, groundLevel, bigTableZ),
+            glm::vec3(bigTableX-5.0f, groundLevel, bigTableZ),
             glm::vec3(0.0f, 90.0f, 0.0f), 
-            glm::vec3(0.7f) 
+            glm::vec3(0.6f) 
         });
 
+        //Big Table 2
         furnitureCollection.push_back({
             bigTable_materialGroups,
             glm::vec3(bigTableX, groundLevel, bigTableZ),
             glm::vec3(0.0f, 90.0f, 0.0f), 
-            glm::vec3(0.7f) 
+            glm::vec3(0.6f) 
         });
 
-        float bigChairOffsetZ = -1.5f; 
-        float bigChairOffsetX = 1.5f; 
+        // Make Big table a small Table
+        furnitureCollection.push_back({
+            bigTable_materialGroups,
+            glm::vec3(bigTableX + 3.0f, groundLevel, bigTableZ + 14.5f),
+            glm::vec3(0.0f, 90.0f, 0.0f), 
+            glm::vec3(0.2f) 
+        });
 
+        float bigChairOffsetZ = -1.0f; 
+        float bigChairOffsetX = 0.5f; 
+
+        //Chairs for the table
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(bigTableX - bigChairOffsetX, groundLevel, bigTableZ + bigChairOffsetZ), 
+            glm::vec3(bigTableX + bigChairOffsetX*3, groundLevel, bigTableZ - bigChairOffsetZ), 
             glm::vec3(0.0f, 90.0f, 0.0f), 
             glm::vec3(0.7f)
         });
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(bigTableX + bigChairOffsetX, groundLevel, bigTableZ + bigChairOffsetZ), 
+            glm::vec3(bigTableX + bigChairOffsetX, groundLevel, bigTableZ - bigChairOffsetZ), 
             glm::vec3(0.0f, 90.0f, 0.0f), 
             glm::vec3(0.7f)
         });
 
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(bigTableX +1.5f, groundLevel, bigTableZ -10.0f), 
+            glm::vec3(bigTableX-5.0f + bigChairOffsetX, groundLevel, bigTableZ - bigChairOffsetZ), 
             glm::vec3(0.0f, 270.0f, 0.0f), 
             glm::vec3(0.7f)
         });
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(bigTableX + 3.5f, groundLevel, bigTableZ -10.0f), 
+            glm::vec3(bigTableX-5.0f + bigChairOffsetX, groundLevel, bigTableZ - bigChairOffsetZ), 
             glm::vec3(0.0f, 270.0f, 0.0f), 
             glm::vec3(0.7f)
         });
+
+        //Blue Ottomans
+      
+        if (!blue_materialGroups.empty()) {
+            
+            furnitureCollection.push_back({
+                blue_materialGroups,
+                glm::vec3(bigTableX - 0.1f, groundLevel, bigTableZ - 4.0f), 
+                glm::vec3(0.0f, 0.0f, 0.0f),         
+                glm::vec3(0.7f)                     
+            });
+            
+            furnitureCollection.push_back({
+                blue_materialGroups,
+                glm::vec3(bigTableX+2.0f, groundLevel, 2.0f),  
+                glm::vec3(0.0f, 0.0f, 0.0f),        
+                glm::vec3(0.7f)                      
+            });
+
+            furnitureCollection.push_back({
+                blue_materialGroups,
+                glm::vec3(bigTableX + 4.0f, groundLevel, bigTableZ + 16.0f),  
+                glm::vec3(0.0f, 0.0f, 0.0f),        
+                glm::vec3(0.7f)                      
+            });
+        }
+
+        //Yellow Ottomans
+
+        if (!yellow_materialGroups.empty()) {
+
+            furnitureCollection.push_back({
+                yellow_materialGroups,
+                glm::vec3(bigTableX +3.0f, groundLevel, bigTableZ + 0.0f), 
+                glm::vec3(0.0f, 0.0f, 0.0f),         
+                glm::vec3(0.7f)                        
+            });
+
+            furnitureCollection.push_back({
+                yellow_materialGroups,
+                glm::vec3(bigTableX + 1.0f, groundLevel, bigTableZ - 4.0f), 
+                glm::vec3(0.0f, 0.0f, 0.0f),         
+                glm::vec3(0.7f)                        
+            });
+
+            furnitureCollection.push_back({
+                yellow_materialGroups,
+                glm::vec3(bigTableX + 2.0f, groundLevel, bigTableZ + 20.0f), 
+                glm::vec3(0.0f, 0.0f, 0.0f),         
+                glm::vec3(0.7f)                        
+            });
+        }
+
+
     }
 }
 
-    auto tallChair_materialGroups = loadObjModel("Objects/tallChairs.obj", reader_config);
+    auto tallChair_materialGroups = loadObjModel("objects/tallChairs.obj", reader_config);
     if (!tallChair_materialGroups.empty()) {
-        // Chair for Tall Table 1
-        // Tall Table 1 is at (-1.0f, groundLevel, 12.0f)
+
+        //Chair for Table 1 near entrance
         furnitureCollection.push_back({
             tallChair_materialGroups,
             glm::vec3(-2.0f, groundLevel, 11.0f), // Slightly less Z to be behind/close to table
@@ -600,23 +640,24 @@ int main() {
             glm::vec3(0.8f)
         });
 
-        // Chair for Tall Table 2
-        // Tall Table 2 is at (3.0f, groundLevel, 12.0f)
+        //Chair for Table 2 near entrance
         furnitureCollection.push_back({
             tallChair_materialGroups,
-            glm::vec3(0.0f, groundLevel, 11.0f), // Slightly less Z to be behind/close to table
-            glm::vec3(0.0f, 0.0f, 0.0f), // Rotate to face towards the table (north)
+            glm::vec3(0.0f, groundLevel, 11.0f), 
+            glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.8f)
         });
 
-         furnitureCollection.push_back({
+        //Chair for Table 1 near divider
+        furnitureCollection.push_back({
             tallChair_materialGroups,
-            glm::vec3(-2.5f, groundLevel, -2.0f), // Slightly less Z to be behind/close to table
-            glm::vec3(0.0f, 0.0f, 0.0f), // Rotate to face towards the table (north)
+            glm::vec3(-2.5f, groundLevel, -2.0f), 
+            glm::vec3(0.0f, 0.0f, 0.0f), 
             glm::vec3(0.8f)
         });
 
-         furnitureCollection.push_back({
+        //Chair for Table 2 near divider
+        furnitureCollection.push_back({
             tallChair_materialGroups,
             glm::vec3(0.0f, groundLevel, 6.0f), 
             glm::vec3(0.0f, 270.0f, 0.0f), 
@@ -626,19 +667,21 @@ int main() {
     
     // --- Load Room Components ---
     // Load Carpet (ground)
-    std::vector<MaterialGroup> carpet0_materialGroups = loadObjModel("carpet_0.obj", reader_config);
-    std::vector<MaterialGroup> carpet1_materialGroups = loadObjModel("carpet_1.obj", reader_config);
-    std::vector<MaterialGroup> carpet2_materialGroups = loadObjModel("carpet_2.obj", reader_config);
+    std::vector<MaterialGroup> carpet0_materialGroups = loadObjModel("objects/carpet_0.obj", reader_config);
+    std::vector<MaterialGroup> carpet1_materialGroups = loadObjModel("objects/carpet_1.obj", reader_config);
+    std::vector<MaterialGroup> carpet2_materialGroups = loadObjModel("objects/carpet_2.obj", reader_config);
 
     // Load Roof
-    std::vector<MaterialGroup> roof_materialGroups = loadObjModel("alt_panels.obj", reader_config);
+    std::vector<MaterialGroup> roof_materialGroups = loadObjModel("objects/alt_panels.obj", reader_config);
 
     // Load NorthWall
-    std::vector<MaterialGroup> northwall_materialGroups = loadObjModel("north_south_wall.obj", reader_config);
+    std::vector<MaterialGroup> northwall_materialGroups = loadObjModel("objects/north_south_wall.obj", reader_config);
+
+    // Load WestWall
+    std::vector<MaterialGroup> westwall_materialGroups = loadObjModel("objects/glassPanel.obj", reader_config);
 
     // East and West Walls
-    WindowWall wall(30,25,0.9,1.5); //default size is 8x8, but we can do this in a scene generator class
-    Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
+    // Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
         
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide and capture mouse cursor
     glfwSetCursorPosCallback(window, mouse_callback); // Register the callback function
@@ -646,6 +689,9 @@ int main() {
 
     // Main loop
     do {
+
+        // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
         // Per-frame time logic
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -702,7 +748,6 @@ int main() {
             carpet2_materialGroups
         };
 
-        // All 6 permutations of 3 carpets
         std::vector<std::vector<int>> carpetPatterns = {
             {0, 1, 2},
             {2, 1, 0},
@@ -747,20 +792,16 @@ int main() {
         // --- Render Roof ---
         if (!roof_materialGroups.empty()) {
 
-            // Define duplication parameters
-            int numDuplicates = 4; // Number of roof panels you want
+            int panels = 4; 
             float zOffset = 15.0f; 
 
-            for (int i = 0; i < numDuplicates; ++i) {
+            for (int i = 0; i < panels; ++i) {
                 glm::mat4 roofModel = glm::mat4(1.0f);
 
-                // Apply base transformations (from your original code)
-                roofModel = glm::scale(roofModel, glm::vec3(0.8f)); // Adjust scale
-                roofModel = glm::translate(roofModel, glm::vec3(-2.5f, 25.0f, 25.0f)); // Adjust base position
-                roofModel = glm::rotate(roofModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
+                roofModel = glm::scale(roofModel, glm::vec3(0.8f)); 
+                roofModel = glm::translate(roofModel, glm::vec3(-2.5f, 25.0f, 25.0f)); 
+                roofModel = glm::rotate(roofModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
 
-                // Apply duplication offset
-                // For each duplicate, translate it further along the X-axis
                 roofModel = glm::translate(roofModel, glm::vec3(i * zOffset,0.0f ,0.0f ));
 
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(roofModel));
@@ -776,10 +817,12 @@ int main() {
 
         // --- Render NorthWall ---
         if (!northwall_materialGroups.empty()) {
-            glm::mat4 northWallModel = glm::mat4(1.0f); // Identity, or adjust if you want transforms
-            northWallModel = glm::scale(northWallModel, glm::vec3(0.5f)); // Shrink it if it's too big
+
+            glm::mat4 northWallModel = glm::mat4(1.0f);
+            northWallModel = glm::scale(northWallModel, glm::vec3(0.5f)); 
             northWallModel = glm::translate(northWallModel, glm::vec3(0.5f, 0.0f, 0.0f));
             northWallModel = glm::rotate(northWallModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(northWallModel));
             for (const auto& group : northwall_materialGroups) {
                 GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
@@ -792,17 +835,18 @@ int main() {
         // --- Render South Wall ---
         if (!northwall_materialGroups.empty()) {
             glm::mat4 southWallModel = glm::mat4(1.0f);
-            // Apply mirror scale (e.g., along X-axis to reflect across YZ plane)
+           
             southWallModel = glm::scale(southWallModel, glm::vec3(-1.0f, 1.0f, 1.0f));
-            // Apply the original transformations (or adjust as needed for the mirrored object)
+            
             southWallModel = glm::scale(southWallModel, glm::vec3(0.5f));
-            southWallModel = glm::translate(southWallModel, glm::vec3(0.5f, 0.0f, 0.0f)); // Same translation as original
+            southWallModel = glm::translate(southWallModel, glm::vec3(0.5f, 0.0f, 0.0f)); 
             southWallModel = glm::rotate(southWallModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
         
-            southWallModel = glm::translate(southWallModel, glm::vec3(-10.0f, 0.0f, 0.0f)); // Example adjustment
+            southWallModel = glm::translate(southWallModel, glm::vec3(-10.0f, 0.0f, 0.0f)); 
 
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(southWallModel));
+
             for (const auto& group : northwall_materialGroups) {
                 GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
                 glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
@@ -811,15 +855,57 @@ int main() {
             }
         }
 
+        //Render West Wall
+        
+        if (!westwall_materialGroups.empty())
+        {
+            int cols = 10; 
+            int rows = 10; 
+
+            float yOffset = 2.0f; 
+            float xOffset = 2.0f; 
+
+            for (int i = 0; i < rows; ++i) {
+              
+                glm::mat4 westWallModel = glm::mat4(1.0f);
+                westWallModel = glm::scale(westWallModel, glm::vec3(1.0f)); // Adjust scale
+                westWallModel = glm::rotate(westWallModel, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
+
+                westWallModel = glm::translate(westWallModel, glm::vec3(-25.0f, groundLevel +(i * yOffset) ,-6.0f ));
+
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(westWallModel));
+                for (const auto& group : westwall_materialGroups) {
+                    GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                    glBindVertexArray(group.VAO);
+                    glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+                }
+
+                for(int j = 0; j < cols; j++){
+                    glm::mat4 westWallModel = glm::mat4(1.0f);
+                    westWallModel = glm::scale(westWallModel, glm::vec3(1.0f)); // Adjust scale
+                    westWallModel = glm::translate(westWallModel, glm::vec3(0.0f, 0.0f, 0.0f)); // Adjust position
+                    westWallModel = glm::rotate(westWallModel, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
+
+                    westWallModel = glm::translate(westWallModel, glm::vec3(-25.0f, groundLevel + (i * yOffset),-6.0f +(j * xOffset)));
+
+                    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(westWallModel));
+                    for (const auto& group : westwall_materialGroups) {
+                        GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                        glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                        glBindVertexArray(group.VAO);
+                        glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+                    }
+                }
+            }
+        }
+
         // Render all furniture
         for (const auto& furniture : furnitureCollection) {
             furniture.render(shaderProgram);
         }
 
-        //Render East and West Walls
-        // wall.draw(view, projection, shaderProgram); //Uncomment the draw call to see the wall
         // westWall.draw(view, projection, shaderProgram);
-        //westWall.draw(view, projection, shaderProgram);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
