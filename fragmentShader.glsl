@@ -5,7 +5,8 @@ in vec3 Normal;
 
 uniform vec3 lightDir;
 uniform vec3 lightColor;
-uniform vec4 objectColor;
+uniform vec4 objectColor; // RGBA
+uniform float alpha;      // <- ADD THIS for MTL transparency override
 
 out vec4 FragColor;
 
@@ -18,5 +19,7 @@ void main() {
     vec3 ambient = 0.6 * lightColor;
 
     vec3 lighting = (ambient + diffuse) * objectColor.rgb;
+
+    // Use material alpha if provided
     FragColor = vec4(lighting, objectColor.a);
 }

@@ -85,8 +85,8 @@ struct MaterialGroup
     GLuint VBO;
     GLsizei vertexCount;
     glm::vec3 color;
+    float alpha = 1.0f; // NEW
 };
-
 struct InterleavedVertex
 {
     float px, py, pz; // Position
@@ -169,15 +169,25 @@ std::vector<MaterialGroup> loadObjModel(const std::string &filename, const tinyo
             glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(InterleavedVertex), (void *)(3 * sizeof(float)));
             glEnableVertexAttribArray(1);
 
-            // Color from material or default
-            glm::vec3 color(0.8f); // default
-            if (mat_id >= 0 && mat_id < (int)materials.size())
+            // Extract color and alpha from material
+            glm::vec3 color(0.8f);
+            float alpha = 1.0f;
+
+            if (mat_id >= 0 && mat_id < static_cast<int>(materials.size()))
             {
                 const auto &m = materials[mat_id];
                 color = glm::vec3(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
+                alpha = m.dissolve; // 'd' value in MTL
+                std::cout << "Material alpha: " << alpha << " for " << m.name << std::endl;
             }
 
-            materialGroups.push_back({VAO, VBO, static_cast<GLsizei>(verts.size()), color});
+            materialGroups.push_back({
+                VAO,
+                VBO,
+                static_cast<GLsizei>(verts.size()),
+                color,
+                alpha // ⬅️ store per-object alpha
+            });
         }
     }
 
@@ -192,13 +202,15 @@ struct Furniture
     glm::vec3 rotation; // in degrees
     glm::vec3 scale;
 
+    // Render function to draw this furniture
     void render(GLuint shaderProgram) const
     {
+        // Compute model matrix from position, rotation, and scale
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, position);
-        model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1, 0, 0));
+        model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0, 1, 0));
+        model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0, 0, 1));
         model = glm::scale(model, scale);
 
         GLuint modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -207,9 +219,30 @@ struct Furniture
         for (const auto &group : materialGroups)
         {
             GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-            glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
-            glBindVertexArray(group.VAO);
-            glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+
+            if (group.alpha < 1.0f)
+            {
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glDepthMask(GL_FALSE); // Optional: helps avoid z-fighting for translucent surfaces
+
+                // Custom glass tint (feel free to tweak the alpha)
+                glm::vec3 glassTint(0.3f, 0.6f, 0.9f);
+                float visibleAlpha = 0.4f;
+                glUniform4f(colorLoc, glassTint.r, glassTint.g, glassTint.b, visibleAlpha);
+
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+
+                glDepthMask(GL_TRUE);
+                glDisable(GL_BLEND);
+            }
+            else
+            {
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                glBindVertexArray(group.VAO);
+                glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+            }
         }
     }
 };
@@ -283,6 +316,17 @@ int main()
             glm::vec3(4.0f, groundLevel, 16.0f), // Position
             glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
             glm::vec3(1.0f)                      // Scale
+        });
+    }
+
+    auto glass_Panel = loadObjModel("Objects/glassPanel.obj", reader_config);
+    if (!glass_Panel.empty())
+    {
+        furnitureCollection.push_back({
+            glass_Panel,
+            glm::vec3(7.0f, groundLevel + 2, 9.0f), // Position
+            glm::vec3(0.0f, 0.0f, 0.0f),            // Rotation
+            glm::vec3(1.0f)                         // Scale
         });
     }
 
