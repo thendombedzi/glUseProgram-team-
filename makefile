@@ -5,7 +5,7 @@ files = tiny_obj_loader.cc Objects/EastWall/WindowUnit.cpp Objects/EastWall/Wind
 
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -g -Iglad/include -IObjects/EastWall
+CXXFLAGS = -g -w -Iglad/include -IObjects/EastWall
 
 # Default target (Linux or Mac)
 main: main.cpp glad.c
