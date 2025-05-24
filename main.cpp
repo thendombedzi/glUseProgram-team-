@@ -359,12 +359,6 @@ void renderDrone(vector<MaterialGroup> drone_materialGroups, GLuint modelLoc) {
     }
 }
 
-void updateProjectionMatrix(GLuint shaderProgram, int width, int height) {
-    glm::mat4 projection = glm::perspective(glm::radians(currentFOV), (float)width / (float)height, 0.1f, 100.0f);
-    GLuint projLoc = glGetUniformLocation(shaderProgram, "projection");
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-}
-
 int main() {
     GLFWwindow *window;
     try {
@@ -767,18 +761,18 @@ int main() {
         droneModel = droneModel * droneRotation; 
 
         // --- Camera Zoom ---
-        // if (glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) { 
-        //     currentFOV -= zoomSpeed * 0.01f; 
-        //     if (currentFOV < minFOV)
-        //         currentFOV = minFOV;
-        //     updateProjectionMatrix(shaderProgram, width, height);
-        // }
-        // if (glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS) { 
-        //     currentFOV += zoomSpeed * 0.01f; 
-        //     if (currentFOV > maxFOV)
-        //         currentFOV = maxFOV;
-        //     updateProjectionMatrix(shaderProgram, width, height);
-        // }
+        if (glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) { 
+            currentFOV -= zoomSpeed; 
+            if (currentFOV < minFOV)
+                currentFOV = minFOV;
+            projection = glm::perspective(glm::radians(currentFOV), (float)width / (float)height, 0.1f, 1000.0f);
+        }
+        if (glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS) { 
+            currentFOV += zoomSpeed; 
+            if (currentFOV > maxFOV)
+                currentFOV = maxFOV;
+            projection = glm::perspective(glm::radians(currentFOV), (float)width / (float)height, 0.1f, 1000.0f);
+        }
 
         glClearColor(0.678f, 0.847f, 0.902f, 1.0f); // background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
