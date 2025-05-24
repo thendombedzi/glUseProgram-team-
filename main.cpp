@@ -337,7 +337,7 @@ void renderDrone(vector<MaterialGroup> drone_materialGroups, GLuint modelLoc) {
     if (!drone_materialGroups.empty()) {
         glm::mat4 droneModel = glm::mat4(1.0f);
         droneModel = glm::translate(droneModel, dronePosition); // Adjust position
-        droneModel = glm::scale(droneModel, glm::vec3(0.1f)); // Adjust scale
+        droneModel = glm::scale(droneModel, glm::vec3(0.4f)); // Adjust scale
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
         for (const auto& group : drone_materialGroups) {
             GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
@@ -739,21 +739,14 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
             dronePosition -= up * speed;          
 
-        // glm::vec3 cameraOffset = -direction * 1.5f + glm::vec3(1.2f, 1.2f, 0.0f); // behind and slightly above
-        glm::vec3 cameraOffset = glm::vec3(0.0f, -0.5f, 0.0f); // directly 3 units below the drone
+        glm::vec3 cameraOffset = glm::vec3(0.0f, -0.5f, 0.0f); 
         glm::vec3 cameraPosition = dronePosition + cameraOffset;
         glm::vec3 cameraTarget = cameraPosition + glm::vec3(0.0f, -1.0f, 0.0f);
-        // view = glm::lookAt(
-        //     cameraPosition,
-        //     dronePosition + direction, // look at where the drone is going
-        //     glm::vec3(0.0f, 1.0f, 0.0f)
-        // );
         view = glm::lookAt(
             cameraPosition,
             cameraTarget,
             up
         );
-//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
         glClearColor(0.678f, 0.847f, 0.902f, 1.0f); // background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -775,21 +768,39 @@ int main() {
         renderFurniture(furnitureCollection); 
         renderDrone(drone_materialGroups, modelLoc); 
 
-/*
-// mini-map 
-int miniWidth = 250;
-int miniHeight = 250;
+        // ----- Mini-map rendering -----
+        int miniWidth = 150;
+        int miniHeight = 300;
 
-// Set viewport to top-right corner
-glViewport(width - miniWidth - 10, height - miniHeight - 10, miniWidth, miniHeight);
+        // Save current viewport
+        glViewport(0, 0, width, height); 
 
-// Set bird's-eye camera directly above the drone
-glm::vec3 topDownCam = dronePosition + glm::vec3(0.0f, 50.0f, 0.0f);
-glm::vec3 lookingDown = dronePosition;
-glm::vec3 upVector = glm::vec3(0.0f, 0.0f, -1.0f); // Optional: rotate minimap to match drone yaw
+        // Set viewport to top-right corner
+        glViewport(width - miniWidth, height - miniHeight - 5, miniWidth, miniHeight);
 
-view = glm::lookAt(topDownCam, lookingDown, upVector);
-*/
+        // Fixed top-down camera position for mini-map
+        glm::vec3 topDownCam = glm::vec3(0.0f, 30.0f, 0.0f);     
+        glm::vec3 lookingDown = glm::vec3(0.0f, 0.0f, 0.0f);       
+        glm::vec3 topDownUp = glm::vec3(0.0f, 0.0f, -1.0f);       
+
+        glm::mat4 minimapView = glm::lookAt(topDownCam, lookingDown, topDownUp);
+        glm::mat4 minimapProj = glm::ortho(-30.0f, 30.0f, -30.0f, 30.0f, 1.0f, 100.0f); // Orthographic projection
+
+        // Upload matrices
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(minimapView));
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(minimapProj));
+
+        // Optionally dim or color differently
+        // glEnable(GL_BLEND);
+        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        renderCarpet(carpet0_materialGroups, carpet1_materialGroups, carpet2_materialGroups, modelLoc);
+        renderNSWalls(northwall_materialGroups, modelLoc); 
+        renderFurniture(furnitureCollection); 
+        renderDrone(drone_materialGroups, modelLoc); 
+
+        // Restore main viewport 
+        glViewport(0, 0, width, height);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
