@@ -29,6 +29,9 @@ glm::vec3 dronePosition = glm::vec3(0.0f, 20.0f, 0.0f);
 float droneYaw = 0.0f;   // rotation around Y axis
 float dronePitch = 0.0f; // rotation around X axis
 
+// Camera filter:
+int filterMode = 0;
+
 const char *getError() {
     const char *errorDescription;
     glfwGetError(&errorDescription);
@@ -346,6 +349,30 @@ void renderDrone(vector<MaterialGroup> drone_materialGroups, GLuint modelLoc) {
             glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
         }
     }
+}
+
+void createFramebuffer(int width, int height, GLuint& fbo, GLuint& colourTex, GLuint& rbo) {
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    // Colour attachment
+    glGenTextures(1, &colourTex);
+    glBindTexture(GL_TEXTURE_2D, colourTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTex, 0);
+
+    // Depth and stencil
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cerr << "ERROR: Framebuffer is not complete!\n";
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 int main() {
@@ -668,7 +695,7 @@ int main() {
     // Load Roof
     std::vector<MaterialGroup> roof_materialGroups = loadObjModel("Objects/alt_panels.obj", reader_config);
 
-    // Load NorthWall
+    // Load North Wall
     std::vector<MaterialGroup> northwall_materialGroups = loadObjModel("Objects/N_SWall.obj", reader_config);
 
     // East and West Walls
@@ -682,9 +709,22 @@ int main() {
     // Load Drone 
     std::vector<MaterialGroup> drone_materialGroups = loadObjModel("Objects/drone.obj", reader_config);
 
+// ----------Variables for Camera Filters----------
+    bool enterPressedLastFrame = false;
+
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // ----------Main rendering loop----------
     do {
+        // Camera colour filter
+        if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS && !enterPressedLastFrame) {
+            filterMode = (filterMode + 1) % 4; // 0 = normal, 1 = night vison, 2 = inverted, 3 = grey scale
+            enterPressedLastFrame = true;
+        }
+        if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_RELEASE) {
+            enterPressedLastFrame = false;
+        }
+
+        // Drone movements
         float speed = 1.0f;
 
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
@@ -699,7 +739,6 @@ int main() {
         direction = glm::normalize(direction);
 
         glm::vec3 right = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
-        // glm::vec3 up(0.0f, 1.0f, 0.0f); 
         glm::vec3 up = direction;
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -710,30 +749,6 @@ int main() {
             dronePosition -= right * speed;
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             dronePosition += right * speed;
-
-        // if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-        //     float angle = rotationSpeed;
-        //     float cosA = cos(angle);
-        //     float sinA = sin(angle);
-
-        //     glm::vec3 newRight = cosA * right - sinA * direction;
-        //     glm::vec3 newDirection = sinA * right + cosA * direction;
-
-        //     right = glm::normalize(newRight);
-        //     direction = glm::normalize(newDirection);
-        // }
-        // if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-        //     float angle = -rotationSpeed;
-        //     float cosA = cos(angle);
-        //     float sinA = sin(angle);
-
-        //     glm::vec3 newRight = cosA * right - sinA * direction;
-        //     glm::vec3 newDirection = sinA * right + cosA * direction;
-
-        //     right = glm::normalize(newRight);
-        //     direction = glm::normalize(newDirection);
-        // }
-
         if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
             dronePosition += up * speed;           
         if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
@@ -758,9 +773,11 @@ int main() {
         GLuint modelLoc = glGetUniformLocation(shaderProgram, "model");
         GLuint viewLoc = glGetUniformLocation(shaderProgram, "view");
         GLuint projLoc = glGetUniformLocation(shaderProgram, "projection");
+        GLuint modeLoc = glGetUniformLocation(shaderProgram, "mode");
 
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        glUniform1i(modeLoc, filterMode);
 
         renderCarpet(carpet0_materialGroups, carpet1_materialGroups, carpet2_materialGroups, modelLoc);
         renderRoof(roof_materialGroups, modelLoc); 
