@@ -28,6 +28,14 @@ glm::mat4 view, projection;
 glm::vec3 dronePosition = glm::vec3(0.0f, 20.0f, 0.0f);
 float droneYaw = 0.0f;   // rotation around Y axis
 float dronePitch = 0.0f; // rotation around X axis
+float droneRoll = 0.0f; // rotation around Z axis
+
+// Camera zoom variables
+float initialFOV = 50.0f;
+float currentFOV = initialFOV;
+float zoomSpeed = 5.0f; 
+float minFOV = 1.0f;
+float maxFOV = 90.0f;
 
 // Camera filter:
 int filterMode = 0;
@@ -338,10 +346,10 @@ void renderFurniture(vector<Furniture> furnitureCollection) {
 
 void renderDrone(vector<MaterialGroup> drone_materialGroups, GLuint modelLoc) {
     if (!drone_materialGroups.empty()) {
-        glm::mat4 droneModel = glm::mat4(1.0f);
-        droneModel = glm::translate(droneModel, dronePosition); // Adjust position
-        droneModel = glm::scale(droneModel, glm::vec3(0.4f)); // Adjust scale
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
+        // glm::mat4 droneModel = glm::mat4(1.0f);
+        // droneModel = glm::translate(droneModel, dronePosition); // Adjust position
+        // droneModel = glm::scale(droneModel, glm::vec3(0.4f)); // Adjust scale
+        // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
         for (const auto& group : drone_materialGroups) {
             GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
             glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
@@ -351,28 +359,10 @@ void renderDrone(vector<MaterialGroup> drone_materialGroups, GLuint modelLoc) {
     }
 }
 
-void createFramebuffer(int width, int height, GLuint& fbo, GLuint& colourTex, GLuint& rbo) {
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    // Colour attachment
-    glGenTextures(1, &colourTex);
-    glBindTexture(GL_TEXTURE_2D, colourTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colourTex, 0);
-
-    // Depth and stencil
-    glGenRenderbuffers(1, &rbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cerr << "ERROR: Framebuffer is not complete!\n";
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+void updateProjectionMatrix(GLuint shaderProgram, int width, int height) {
+    glm::mat4 projection = glm::perspective(glm::radians(currentFOV), (float)width / (float)height, 0.1f, 100.0f);
+    GLuint projLoc = glGetUniformLocation(shaderProgram, "projection");
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 }
 
 int main() {
@@ -394,7 +384,7 @@ int main() {
     // Set projection matrix
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    projection = glm::perspective(glm::radians(60.0f), (float)width / height, 0.1f, 1000.0f);
+    projection = glm::perspective(glm::radians(currentFOV), (float)width / (float)height, 0.1f, 1000.0f);
 
     tinyobj::ObjReaderConfig reader_config;
     reader_config.triangulate = true;
@@ -709,13 +699,12 @@ int main() {
     // Load Drone 
     std::vector<MaterialGroup> drone_materialGroups = loadObjModel("Objects/drone.obj", reader_config);
 
-// ----------Variables for Camera Filters----------
     bool enterPressedLastFrame = false;
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // ----------Main rendering loop----------
     do {
-        // Camera colour filter
+        // ----- Camera colour filters -----
         if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS && !enterPressedLastFrame) {
             filterMode = (filterMode + 1) % 4; // 0 = normal, 1 = night vison, 2 = inverted, 3 = grey scale
             enterPressedLastFrame = true;
@@ -724,44 +713,72 @@ int main() {
             enterPressedLastFrame = false;
         }
 
-        // Drone movements
+        // ----- Drone Movement -----
+        // Translate along all 3 axes
         float speed = 1.0f;
 
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-            droneYaw += speed;
+            dronePosition.y += speed;
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-            droneYaw -= speed;
-
-        glm::vec3 direction;
-        direction.x = cos(glm::radians(droneYaw)) * cos(glm::radians(dronePitch));
-        direction.y = sin(glm::radians(dronePitch));
-        direction.z = sin(glm::radians(droneYaw)) * cos(glm::radians(dronePitch));
-        direction = glm::normalize(direction);
-
-        glm::vec3 right = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
-        glm::vec3 up = direction;
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            dronePosition += direction * speed;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            dronePosition -= direction * speed;
+            dronePosition.y -= speed;      
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            dronePosition -= right * speed;
+            dronePosition.x -= speed;
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            dronePosition += right * speed;
-        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
-            dronePosition += up * speed;           
-        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
-            dronePosition -= up * speed;          
+            dronePosition.x += speed;
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            dronePosition.z -= speed;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            dronePosition.z += speed;
 
-        glm::vec3 cameraOffset = glm::vec3(0.0f, -0.5f, 0.0f); 
-        glm::vec3 cameraPosition = dronePosition + cameraOffset;
-        glm::vec3 cameraTarget = cameraPosition + glm::vec3(0.0f, -1.0f, 0.0f);
-        view = glm::lookAt(
-            cameraPosition,
-            cameraTarget,
-            up
-        );
+        // Rotate along all 3 axes
+        float rotationSpeed = 2.0f;
+
+        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+            droneYaw += rotationSpeed;
+        if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+            droneYaw -= rotationSpeed;
+        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+            dronePitch += rotationSpeed;
+        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+            dronePitch -= rotationSpeed;
+        if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS)
+            droneRoll += rotationSpeed;
+        if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS)
+            droneRoll -= rotationSpeed;
+
+        // Create the drone's rotation matrix
+        glm::mat4 droneRotation = glm::mat4(1.0f);
+        droneRotation = glm::rotate(droneRotation, glm::radians(droneYaw), glm::vec3(0.0f, 1.0f, 0.0f));
+        droneRotation = glm::rotate(droneRotation, glm::radians(dronePitch), glm::vec3(1.0f, 0.0f, 0.0f));
+        droneRotation = glm::rotate(droneRotation, glm::radians(droneRoll), glm::vec3(0.0f, 0.0f, 1.0f));
+
+        glm::vec3 cameraOffsetLocal = glm::vec3(0.0f, -0.5f, 0.0f);
+        glm::vec3 cameraOffsetWorld = glm::vec3(droneRotation * glm::vec4(cameraOffsetLocal, 1.0f));
+        glm::vec3 cameraPosition = dronePosition + cameraOffsetWorld;
+        glm::vec3 cameraTargetOffsetLocal = glm::vec3(0.0f, -1.0f, 0.0f);
+        glm::vec3 cameraTargetOffsetWorld = glm::vec3(droneRotation * glm::vec4(cameraTargetOffsetLocal, 1.0f));
+        glm::vec3 cameraTarget = cameraPosition + cameraTargetOffsetWorld;
+        view = glm::lookAt(cameraPosition, cameraTarget, glm::vec3(0.0f, 0.0f, -1.0f)); // Or glm::vec3(0.0f, 1.0f, 0.0f) depending on your world up
+
+        // Create the drone's model matrix with translation and rotation
+        glm::mat4 droneModel = glm::mat4(1.0f);
+        droneModel = glm::translate(droneModel, dronePosition);
+        droneModel = glm::scale(droneModel, glm::vec3(0.4f));
+        droneModel = droneModel * droneRotation; 
+
+        // --- Camera Zoom ---
+        // if (glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) { 
+        //     currentFOV -= zoomSpeed * 0.01f; 
+        //     if (currentFOV < minFOV)
+        //         currentFOV = minFOV;
+        //     updateProjectionMatrix(shaderProgram, width, height);
+        // }
+        // if (glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS) { 
+        //     currentFOV += zoomSpeed * 0.01f; 
+        //     if (currentFOV > maxFOV)
+        //         currentFOV = maxFOV;
+        //     updateProjectionMatrix(shaderProgram, width, height);
+        // }
 
         glClearColor(0.678f, 0.847f, 0.902f, 1.0f); // background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -782,8 +799,10 @@ int main() {
         renderCarpet(carpet0_materialGroups, carpet1_materialGroups, carpet2_materialGroups, modelLoc);
         renderRoof(roof_materialGroups, modelLoc); 
         renderNSWalls(northwall_materialGroups, modelLoc); 
-        renderFurniture(furnitureCollection); 
-        renderDrone(drone_materialGroups, modelLoc); 
+        // renderFurniture(furnitureCollection); 
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
+        renderDrone(drone_materialGroups, modelLoc);
 
         // ----- Mini-map rendering -----
         int miniWidth = 150;
@@ -807,13 +826,11 @@ int main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(minimapView));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(minimapProj));
 
-        // Optionally dim or color differently
-        // glEnable(GL_BLEND);
-        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
         renderCarpet(carpet0_materialGroups, carpet1_materialGroups, carpet2_materialGroups, modelLoc);
         renderNSWalls(northwall_materialGroups, modelLoc); 
         renderFurniture(furnitureCollection); 
+        
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
         renderDrone(drone_materialGroups, modelLoc); 
 
         // Restore main viewport 
