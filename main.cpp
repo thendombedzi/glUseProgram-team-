@@ -701,45 +701,43 @@ int main()
         }
 
         // Render East and West Walls
-        wall.draw(view, projection, shaderProgram); // Uncomment the draw call to see the wall
-                                                    // westWall.draw(view, projection, shaderProgram);
+        wall.draw(view, projection, shaderProgram);
 
-        // --- Manual Time-of-Day Setup ---
-        static float timeOfDay = 12.0f; // Start at midday
-        const float deltaTime = 0.1f;   // Speed of time change per frame
+        static int timeSlot = 2; // Default to Midday
 
-        // User input to adjust time (left/right arrows)
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            timeOfDay -= deltaTime;
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            timeOfDay += deltaTime;
+        // Handle user input (keys 1–4)
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+            timeSlot = 1;
+        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+            timeSlot = 2;
+        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+            timeSlot = 3;
+        if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+            timeSlot = 4;
 
-        // Clamp/wrap time to 0–24 hours
-        timeOfDay = fmod(timeOfDay + 24.0f, 24.0f);
-
-        // Set light color and intensity based on time
+        // Determine light color and intensity
         glm::vec3 sunColor;
         float intensity;
 
-        if (timeOfDay >= 6.0f && timeOfDay < 9.0f)
+        switch (timeSlot)
         {
-            sunColor = glm::vec3(1.0f, 0.65f, 0.4f); // Morning sunrise
+        case 1: // Morning
+            sunColor = glm::vec3(1.0f, 0.65f, 0.4f);
             intensity = 0.5f;
-        }
-        else if (timeOfDay >= 9.0f && timeOfDay < 17.0f)
-        {
-            sunColor = glm::vec3(1.0f, 0.95f, 0.85f); // Midday soft sunlight
+            break;
+        case 2: // Midday
+            sunColor = glm::vec3(1.0f, 0.95f, 0.85f);
             intensity = 1.0f;
-        }
-        else if (timeOfDay >= 17.0f && timeOfDay < 20.0f)
-        {
-            sunColor = glm::vec3(1.0f, 0.5f, 0.25f); // Evening sunset
+            break;
+        case 3: // Evening
+            sunColor = glm::vec3(1.0f, 0.5f, 0.25f);
             intensity = 0.4f;
-        }
-        else
-        {
-            sunColor = glm::vec3(0.1f, 0.1f, 0.3f); // Night bluish tint
+            break;
+        case 4: // Night
+        default:
+            sunColor = glm::vec3(0.1f, 0.1f, 0.3f);
             intensity = 0.15f;
+            break;
         }
 
         // Final light color to send to shader
