@@ -2,64 +2,84 @@
 
 out vec4 FragColor;
 
-in vec3 FragPos;    
-in vec3 Normal;     
-in vec2 TexCoord;   
+in vec3  FragPos;    
+in vec3  Normal;     
+in vec2  TexCoord;
+in vec4  FragPosLightSpace;
 
-uniform vec4 objectColor;            // Base RGBA object color
-uniform sampler2D textureSampler;    
-uniform int hasTexture;              // 0 = solid color, 1 = texture
+uniform vec4  objectColor;
+uniform sampler2D textureSampler;
+uniform int hasTexture;
 
-uniform vec3 lightPos;               
+uniform vec3 lightPos;
 uniform vec3 lightColor;
-uniform vec3 lightDir;               // Used for night vision post-process
+uniform vec3 lightDir;
 
-uniform float alpha;                 // Alpha override from material (e.g., MTL)
+uniform float alpha;
+uniform int mode;
 
-uniform int mode; // 0 = normal, 1 = night vision, 2 = grayscale, 3 = inverted
+uniform sampler2D shadowMap;
+uniform float shadowBias;
+
+// --- Shadow Calculation ---
+float calculateShadow(vec4 fragPosLightSpace)
+{
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    //float closestDepth = texture(shadowMap, projCoords.xy).r;
+    float currentDepth = projCoords.z;
+
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    for (int x = -1; x <= 1; ++x)
+    {
+       for (int y = -1; y <= 1; ++y)
+       {
+          float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+          shadow += currentDepth - shadowBias > pcfDepth ? 1.0 : 0.0;
+       }
+    } 
+    shadow /= 9.0;
+
+    if (projCoords.z > 1.0)
+        shadow = 0.0;
+
+    return shadow;
+}
 
 void main()
 {
-    // --- Lighting calculations ---
+    // --- Lighting ---
     float ambientStrength = 0.6;
     vec3 ambient = ambientStrength * lightColor;
 
-    vec3 norm = normalize(Normal);
-    vec3 lightDirection = normalize(lightPos - FragPos);
-    float diff = max(dot(norm, lightDirection), 0.0);
+    vec3 N = normalize(Normal);
+    vec3 L = normalize(-lightDir);
+    float diff = max(dot(N, L), 0.0);
     vec3 diffuse = diff * lightColor * 0.4;
 
-    vec3 lighting = min(ambient + diffuse, vec3(1.0));
+    float shadow = calculateShadow(FragPosLightSpace);
+    vec3 lighting = ambient + (1.0 - shadow) * diffuse;
 
-    // --- Base color from texture or objectColor ---
-    vec4 baseColor;
-    if (hasTexture == 1) {
-        vec4 texColor = texture(textureSampler, TexCoord);
-        baseColor = vec4(texColor.rgb + lighting * 0.05, texColor.a); // Boost lighting slightly
-    } else {
-        baseColor = vec4(objectColor.rgb * lighting, objectColor.a);
-    }
+    // --- Color Selection ---
+    vec4 texColor = texture(textureSampler, TexCoord);
+    vec4 baseColor = mix(objectColor, texColor, float(hasTexture));
 
-    // Override alpha if provided (assumes 0.0–1.0 valid input)
-    baseColor.a = alpha;
+    // --- Final Lit Color ---
+    vec3 litRGB = baseColor.rgb * lighting;
+    float finalAlpha = baseColor.a * alpha;
+    vec4 finalColor = vec4(litRGB, finalAlpha);
 
-    // --- Post-processing effects ---
-    vec4 finalColor = baseColor;
-
+    // --- Post FX ---
     if (mode == 1) {
-        // Night vision
-        float intensity = dot(baseColor.rgb, vec3(0.2126, 0.7152, 0.0722)); 
-        vec3 nightVision = vec3(0.1, 1.0, 0.1) * intensity * 1.5;
-        finalColor = vec4(nightVision, baseColor.a);
-    }
-    else if (mode == 2) {
-        // Grayscale
-        float grey = dot(baseColor.rgb, vec3(0.299, 0.587, 0.114));
-        finalColor = vec4(vec3(grey), baseColor.a);
-    }
-    else if (mode == 3) {
-        // Inverted
-        finalColor = vec4(vec3(1.0) - baseColor.rgb, baseColor.a);
+        float intensity = dot(finalColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+        finalColor = vec4(vec3(0.1, 1.0, 0.1) * intensity * 1.5, finalAlpha);
+    } else if (mode == 2) {
+        float grey = dot(finalColor.rgb, vec3(0.299, 0.587, 0.114));
+        finalColor = vec4(vec3(grey), finalAlpha);
+    } else if (mode == 3) {
+        finalColor = vec4(vec3(1.0) - finalColor.rgb, finalAlpha);
     }
 
     FragColor = finalColor;

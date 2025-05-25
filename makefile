@@ -1,7 +1,7 @@
 # Source files
 files = tiny_obj_loader.cc Objects/EastWall/WindowUnit.cpp Objects/EastWall/WindowWall.cpp Objects/EastWall/Verticies.cpp  shader.cpp \
     Objects/WestWall/Wall.cpp Objects/WestWall/RectangularPrism.cpp Objects/WestWall/Grids.cpp \
-	Objects/WestWall/Doors.cpp lightingManager.cpp \
+	Objects/WestWall/Doors.cpp lightingManager.cpp shadowMapper.cpp \
 
 # Compiler and flags
 CXX = g++
