@@ -11,6 +11,7 @@
 class Grids {
 	public:
 	std::vector<Vertex> createGrooveTile(float x, float y, float width, float height, float zOffset = 0.11f);
+	std::vector<Vertex> createGrooveTileGrid(float totalWidth, float totalHeight, float tileThickness);
 };
 
 #endif

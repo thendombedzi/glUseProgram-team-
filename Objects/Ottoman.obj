@@ -1,6 +1,6 @@
 # Blender 4.4.3
 # www.blender.org
-mtllib Ornament.mtl
+mtllib Ottoman.mtl
 g Cube.003_Mesh
 v 5.691084 -0.137869 -4.389528
 v 5.691084 -0.127869 -4.373960
