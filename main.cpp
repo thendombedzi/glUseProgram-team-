@@ -590,7 +590,7 @@ void renderWEWalls(float groundLevel, const std::vector<MaterialGroup> &westwall
     }
 }
 
-void renderFurniture(vector<Furniture> furnitureCollection)
+void renderFurniture(vector<Furniture> furnitureCollection, GLuint shaderProgram)
 {
     for (const auto &furniture : furnitureCollection)
     {
@@ -1137,9 +1137,9 @@ int main()
         renderCarpet(carpet0_materialGroups, carpet1_materialGroups, carpet2_materialGroups, depthModelLoc);
         renderRoof(roof_materialGroups, depthModelLoc);
         renderNSWalls(northwall_materialGroups, depthModelLoc);
-        renderWEWalls(groundLevel, westwall_materialGroups, depthModelLoc);
-        renderFurniture(furnitureCollection);
+        renderFurniture(furnitureCollection, depthModelLoc);
         renderDrone(drone_materialGroups, depthModelLoc);
+        renderWEWalls(groundLevel, westwall_materialGroups, depthModelLoc);
 
         // (Optional) render drone shadow if desired
         glUniformMatrix4fv(depthModelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
@@ -1173,8 +1173,8 @@ int main()
         renderCarpet(carpet0_materialGroups, carpet1_materialGroups, carpet2_materialGroups, modelLoc);
         renderRoof(roof_materialGroups, modelLoc);
         renderNSWalls(northwall_materialGroups, modelLoc);
+        renderFurniture(furnitureCollection, shaderProgram);
         renderWEWalls(groundLevel, westwall_materialGroups, modelLoc);
-        renderFurniture(furnitureCollection);
 
         westWall.draw(view, projection, shaderProgram);
         glm::mat4 translationMatrix(
@@ -1253,7 +1253,7 @@ int main()
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(minimapProj));
 
         renderCarpet(carpet0_materialGroups, carpet1_materialGroups, carpet2_materialGroups, modelLoc);
-        renderFurniture(furnitureCollection);
+        renderFurniture(furnitureCollection, shaderProgram);
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
         renderDrone(drone_materialGroups, modelLoc);
