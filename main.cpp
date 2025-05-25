@@ -300,7 +300,7 @@ struct Furniture
         GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
         if (hasTextureLoc == -1)
         {
-            std::cerr << "Uniform 'hasTexture' not found!" << std::endl;
+            // std::cerr << "Uniform 'hasTexture' not found!" << std::endl;
         }
 
         // GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -452,32 +452,43 @@ void renderRoof(vector<MaterialGroup> roof_materialGroups, GLuint modelLoc)
     }
 }
 
-void renderNSWalls(vector<MaterialGroup> northwall_materialGroups, GLuint modelLoc)
-{
-    // --- Render North Wall --
-    if (!northwall_materialGroups.empty())
-    {
+void renderNSWalls(vector<MaterialGroup> northwall_materialGroups, GLuint modelLoc) {
+   
+    GLint hasTextureLoc = glGetUniformLocation(shaderProgram, "hasTexture");
+    if (hasTextureLoc == -1) {
+       // std::cerr << "Uniform 'hasTexture' not found!" << std::endl;
+    }
 
+    // --- Render North Wall ---
+    if (!northwall_materialGroups.empty()) {
         glm::mat4 northWallModel = glm::mat4(1.0f);
         northWallModel = glm::scale(northWallModel, glm::vec3(0.5f));
         northWallModel = glm::translate(northWallModel, glm::vec3(0.5f, 0.0f, 0.0f));
         northWallModel = glm::rotate(northWallModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(northWallModel));
-        for (const auto &group : northwall_materialGroups)
-        {
-            GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-            glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+        
+        for (const auto& group : northwall_materialGroups) {
+            if (group.hasTexture) {
+                glUniform1i(hasTextureLoc, 1); 
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, group.textureID);
+                GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
+                glUniform1i(textureSamplerLoc, 0); 
+            } else {
+                glUniform1i(hasTextureLoc, 0); 
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+            }
+            
             glBindVertexArray(group.VAO);
             glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
         }
     }
 
     // --- Render South Wall ---
-    if (!northwall_materialGroups.empty())
-    {
+    if (!northwall_materialGroups.empty()) {
         glm::mat4 southWallModel = glm::mat4(1.0f);
-
         southWallModel = glm::scale(southWallModel, glm::vec3(-1.0f, 1.0f, 1.0f));
         southWallModel = glm::scale(southWallModel, glm::vec3(0.5f));
         southWallModel = glm::translate(southWallModel, glm::vec3(0.5f, 0.0f, 0.0f));
@@ -486,14 +497,26 @@ void renderNSWalls(vector<MaterialGroup> northwall_materialGroups, GLuint modelL
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(southWallModel));
 
-        for (const auto &group : northwall_materialGroups)
-        {
-            GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-            glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+        for (const auto& group : northwall_materialGroups) {
+            if (group.hasTexture) {
+                glUniform1i(hasTextureLoc, 1); 
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, group.textureID);
+                GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
+                glUniform1i(textureSamplerLoc, 0); 
+            } else {
+                glUniform1i(hasTextureLoc, 0); 
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+            }
+            
             glBindVertexArray(group.VAO);
             glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
         }
     }
+    
+    glUniform1i(hasTextureLoc, 0); // Default to no texture
+    glBindTexture(GL_TEXTURE_2D, 0); // Unbind any textures
 }
 
 void renderWEWalls(float groundLevel, const std::vector<MaterialGroup> &westwall_materialGroups, GLuint modelLoc)
@@ -1167,7 +1190,7 @@ int main()
         GLint hasTextureLoc = glGetUniformLocation(shaderProgram, "hasTexture");
         if (hasTextureLoc == -1)
         {
-            std::cerr << "Uniform 'hasTexture' not found!" << std::endl;
+            // std::cerr << "Uniform 'hasTexture' not found!" << std::endl;
         }
 
         renderCarpet(carpet0_materialGroups, carpet1_materialGroups, carpet2_materialGroups, modelLoc);
