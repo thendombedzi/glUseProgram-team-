@@ -903,7 +903,7 @@ int main()
 
                 // Furthest
                 furnitureCollection.push_back({blue_materialGroups,
-                                               glm::vec3(bigTableX - 0.0f, groundLevel, bigTableZ),
+                                               glm::vec3(bigTableX - 0.0f, groundLevel, bigTableZ - 1.5f),
                                                glm::vec3(0.0f, 0.0f, 0.0f),
                                                glm::vec3(0.7f)});
 
