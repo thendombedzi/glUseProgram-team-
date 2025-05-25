@@ -8,12 +8,12 @@ CXX = g++
 CXXFLAGS = -g -Iglad/include -IObjects/EastWall
 
 # Default target (Linux or Mac)
-main: main.cpp glad.c
-	$(CXX) $(CXXFLAGS) $(files) main.cpp glad.c -lglfw -lGLEW -ldl -lGL -pthread -o main
+main: main.cpp 
+	$(CXX) $(CXXFLAGS) $(files) main.cpp -lglfw -lGLEW -ldl -lGL -pthread -o main
 
 # Windows build target
 windows:
-	$(CXX) $(CXXFLAGS) $(files) main.cpp glad.c -L/mingw64/lib -I/mingw64/include -lglfw3 -lopengl32 -lglew32 -pthread -o main.exe
+	$(CXX) $(CXXFLAGS) $(files) main.cpp  -L/mingw64/lib -I/mingw64/include -lglfw3 -lopengl32 -lglew32 -pthread -o main.exe
 
 # Clean and Run
 clean:

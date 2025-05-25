@@ -1,4 +1,4 @@
-#include "LightingManager.hpp"
+#include "lightingManager.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
 glm::vec3 LightingManager::lightDirection = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));

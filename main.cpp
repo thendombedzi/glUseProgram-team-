@@ -10,6 +10,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h" // Include stb_image.h
+
 #include "shader.hpp"
 #include "tiny_obj_loader.h"
 #include "Objects/EastWall/WindowWall.hpp"
@@ -22,13 +25,6 @@ using namespace std;
 // Global OpenGL data
 GLuint shaderProgram;
 glm::mat4 view, projection;
-
-// Define MaterialGroup at global scope before using it
-// struct MaterialGroup {
-//     GLuint VAO, VBO;
-//     GLsizei vertexCount;
-//     glm::vec3 color;
-// };
 
 const char *getError()
 {
@@ -78,21 +74,67 @@ inline GLFWwindow *setUp()
     return window;
 }
 
-// Your MaterialGroup definition
+// Your MaterialGroup definition - UPDATED to include texture ID
 struct MaterialGroup
 {
     GLuint VAO;
     GLuint VBO;
     GLsizei vertexCount;
     glm::vec3 color;
+    GLuint textureID; // New: Texture ID for this material group
+    bool hasTexture;  // New: Flag to indicate if this group has a texture
 };
 
+// Interleaved vertex structure - UPDATED to include texture coordinates
 struct InterleavedVertex
 {
     float px, py, pz; // Position
     float nx, ny, nz; // Normal
+    float tx, ty;     // Texture coordinates
 };
 
+// Helper function to load a texture using stb_image
+GLuint loadTexture(const std::string &filepath)
+{
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    // Set texture wrapping and filtering options
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BIT, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load(filepath.c_str(), &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        GLenum format = GL_RGB;
+        if (nrChannels == 1)
+            format = GL_RED;
+        else if (nrChannels == 3)
+            format = GL_RGB;
+        else if (nrChannels == 4)
+            format = GL_RGBA;
+
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        // THIS IS THE LINE TO ADD/CHECK
+        std::cerr << "Failed to load texture: " << filepath << " Reason: " << stbi_failure_reason() << std::endl;
+        // Optionally load a default white texture if loading fails
+        unsigned char defaultData[] = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}; // Small white default texture data
+        // For a 1x1 white texture, you can use:
+        // unsigned char defaultData[] = {255, 255, 255, 255}; // RGBA
+        // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, defaultData);
+        // No mipmaps needed for 1x1
+    }
+    stbi_image_free(data);
+    return textureID;
+}
 std::vector<MaterialGroup> loadObjModel(const std::string &filename, const tinyobj::ObjReaderConfig &config)
 {
     tinyobj::ObjReader reader;
@@ -145,6 +187,18 @@ std::vector<MaterialGroup> loadObjModel(const std::string &filename, const tinyo
                     vertex.nz = 1.0f; // fallback
                 }
 
+                // Get texture coordinates
+                if (!attrib.texcoords.empty() && idx.texcoord_index >= 0)
+                {
+                    vertex.tx = attrib.texcoords[2 * idx.texcoord_index + 0];
+                    vertex.ty = attrib.texcoords[2 * idx.texcoord_index + 1];
+                }
+                else
+                {
+                    vertex.tx = 0.0f; // Default texture coordinates
+                    vertex.ty = 0.0f;
+                }
+
                 materialVertexMap[mat_id].push_back(vertex);
             }
 
@@ -169,15 +223,29 @@ std::vector<MaterialGroup> loadObjModel(const std::string &filename, const tinyo
             glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(InterleavedVertex), (void *)(3 * sizeof(float)));
             glEnableVertexAttribArray(1);
 
-            // Color from material or default
-            glm::vec3 color(0.8f); // default
+            // Texture coordinates: location 2
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(InterleavedVertex), (void *)(6 * sizeof(float)));
+            glEnableVertexAttribArray(2);
+
+            glm::vec3 color(0.8f); // default color
+            GLuint textureID = 0;  // default to no texture
+            bool hasTexture = false;
+
             if (mat_id >= 0 && mat_id < (int)materials.size())
             {
                 const auto &m = materials[mat_id];
                 color = glm::vec3(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
+
+                // Load texture if diffuse texture map is specified
+                if (!m.diffuse_texname.empty())
+                {
+                    std::string texturePath = m.diffuse_texname; // tinyobjloader should handle relative paths from where the .obj is loaded
+                    textureID = loadTexture(texturePath);
+                    hasTexture = true;
+                }
             }
 
-            materialGroups.push_back({VAO, VBO, static_cast<GLsizei>(verts.size()), color});
+            materialGroups.push_back({VAO, VBO, static_cast<GLsizei>(verts.size()), color, textureID, hasTexture});
         }
     }
 
@@ -204,10 +272,29 @@ struct Furniture
         GLuint modelLoc = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
+        // Get uniform location for hasTexture
+        GLint hasTextureLoc = glGetUniformLocation(shaderProgram, "hasTexture");
+        if (hasTextureLoc == -1) {
+            std::cerr << "Uniform 'hasTexture' not found!" << std::endl;
+        }
+
         for (const auto &group : materialGroups)
         {
-            GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-            glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+            if (group.hasTexture)
+            {
+                glUniform1i(hasTextureLoc, 1); // Tell shader to use texture
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, group.textureID);
+                GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
+                glUniform1i(textureSamplerLoc, 0); // Set to texture unit 0
+            }
+            else
+            {
+                glUniform1i(hasTextureLoc, 0); // Tell shader to use color
+                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+            }
+
             glBindVertexArray(group.VAO);
             glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
         }
@@ -260,16 +347,16 @@ int main()
         furnitureCollection.push_back({
             blue_materialGroups,
             glm::vec3(7.0f, groundLevel, 12.0f), // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
         });
 
         // Second blue carpet
         furnitureCollection.push_back({
             blue_materialGroups,
             glm::vec3(6.0f, groundLevel, 14.0f), // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
         });
     }
 
@@ -281,8 +368,8 @@ int main()
         furnitureCollection.push_back({
             yellow_materialGroups,
             glm::vec3(4.0f, groundLevel, 16.0f), // Position
-            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
         });
     }
 
@@ -321,9 +408,9 @@ int main()
 
     if (!ornament_materialGroups.empty())
     {
-        float startZ = 13.0f;                // Southmost position
-        float spacing = 6.0f;                // Spacing between ornaments
-        float ornamentX = -22.0f;            // Further left position
+        float startZ = 13.0f;           // Southmost position
+        float spacing = 6.0f;           // Spacing between ornaments
+        float ornamentX = -22.0f;       // Further left position
         float cutoffOffset = spacing / 2.0f; // Halfway between ornaments
 
         for (int i = 0; i < 4; ++i)
@@ -338,8 +425,8 @@ int main()
                 furnitureCollection.push_back({
                     cutoffs_materialGroups,
                     glm::vec3(ornamentX + 2.0f, groundLevel, startZ - (i * spacing) + cutoffOffset + 2.5f), // Position halfway
-                    glm::vec3(0.0f, 180.0f, 0.0f),                                                          // Rotation
-                    glm::vec3(1.0f)                                                                         // Scale
+                    glm::vec3(0.0f, 180.0f, 0.0f),                                                              // Rotation
+                    glm::vec3(1.0f)                                                                             // Scale
                 });
             }
         }
@@ -411,8 +498,8 @@ int main()
         furnitureCollection.push_back({
             tallTable_materialGroups,
             glm::vec3(3.0f, groundLevel, 12.0f), // Moved further south (positive Z), spaced
-            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
         });
     }
     auto potPlant_materialGroups = loadObjModel("Objects/potPlant.obj", reader_config);
@@ -422,8 +509,8 @@ int main()
         furnitureCollection.push_back({
             potPlant_materialGroups,
             glm::vec3(5.0f, groundLevel, 15.0f), // Moved even further north (negative Z)
-            glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
-            glm::vec3(1.0f)                      // Scale
+            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotation
+            glm::vec3(1.0f)                       // Scale
         });
     }
 
@@ -435,8 +522,8 @@ int main()
         furnitureCollection.push_back({
             shortTable_materialGroups,
             glm::vec3(-4.0f, groundLevel, -16.0f), // Moved even further north (negative Z)
-            glm::vec3(0.0f, 0.0f, 0.0f),           // Rotation
-            glm::vec3(1.0f)                        // Scale
+            glm::vec3(0.0f, 0.0f, 0.0f),            // Rotation
+            glm::vec3(1.0f)                         // Scale
         });
 
         // Short Table 2
@@ -519,7 +606,7 @@ int main()
         }
     }
 
-    auto tallChair_materialGroups = loadObjModel("Objects/tallChair.obj", reader_config);
+    auto tallChair_materialGroups = loadObjModel("Objects/tallChairs.obj", reader_config);
     if (!tallChair_materialGroups.empty())
     {
         // Chair for Tall Table 1
@@ -533,7 +620,7 @@ int main()
         // Tall Table 2 is at (3.0f, groundLevel, 12.0f)
         furnitureCollection.push_back({tallChair_materialGroups,
                                        glm::vec3(3.0f, groundLevel, 11.0f), // Slightly less Z to be behind/close to table
-                                       glm::vec3(0.0f, 0.0f, 0.0f),         // Rotate to face towards the table (north)
+                                       glm::vec3(0.0f, 0.0f, 0.0f),          // Rotate to face towards the table (north)
                                        glm::vec3(1.0f)});
     }
 
@@ -571,17 +658,35 @@ int main()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+        // Get uniform location for hasTexture
+        GLint hasTextureLoc = glGetUniformLocation(shaderProgram, "hasTexture");
+        if (hasTextureLoc == -1) {
+            std::cerr << "Uniform 'hasTexture' not found!" << std::endl;
+        }
+
         // --- Render Carpet ---
         if (!carpet0_materialGroups.empty())
         {
             glm::mat4 carpetModel = glm::mat4(1.0f);
-            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f));                 // Adjust scale
+            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f));          // Adjust scale
             carpetModel = glm::translate(carpetModel, glm::vec3(0.0f, 50.0f, 0.0f)); // Adjust position
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
             for (const auto &group : carpet0_materialGroups)
             {
-                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                if (group.hasTexture)
+                {
+                    glUniform1i(hasTextureLoc, 1); // Tell shader to use texture
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, group.textureID);
+                    GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
+                    glUniform1i(textureSamplerLoc, 0); // Set to texture unit 0
+                }
+                else
+                {
+                    glUniform1i(hasTextureLoc, 0); // Tell shader to use color
+                    GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                }
                 glBindVertexArray(group.VAO);
                 glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
@@ -590,13 +695,25 @@ int main()
         if (!carpet1_materialGroups.empty())
         {
             glm::mat4 carpetModel = glm::mat4(1.0f);
-            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f));                   // Adjust scale
+            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f));            // Adjust scale
             carpetModel = glm::translate(carpetModel, glm::vec3(-15.0f, 50.0f, 0.0f)); // Adjust position
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
             for (const auto &group : carpet1_materialGroups)
             {
-                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                if (group.hasTexture)
+                {
+                    glUniform1i(hasTextureLoc, 1); // Tell shader to use texture
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, group.textureID);
+                    GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
+                    glUniform1i(textureSamplerLoc, 0); // Set to texture unit 0
+                }
+                else
+                {
+                    glUniform1i(hasTextureLoc, 0); // Tell shader to use color
+                    GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                }
                 glBindVertexArray(group.VAO);
                 glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
@@ -605,13 +722,25 @@ int main()
         if (!carpet2_materialGroups.empty())
         {
             glm::mat4 carpetModel = glm::mat4(1.0f);
-            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f));                   // Adjust scale
+            carpetModel = glm::scale(carpetModel, glm::vec3(0.15f));            // Adjust scale
             carpetModel = glm::translate(carpetModel, glm::vec3(-30.0f, 50.0f, 0.0f)); // Adjust position
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(carpetModel));
             for (const auto &group : carpet2_materialGroups)
             {
-                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                if (group.hasTexture)
+                {
+                    glUniform1i(hasTextureLoc, 1); // Tell shader to use texture
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, group.textureID);
+                    GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
+                    glUniform1i(textureSamplerLoc, 0); // Set to texture unit 0
+                }
+                else
+                {
+                    glUniform1i(hasTextureLoc, 0); // Tell shader to use color
+                    GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                }
                 glBindVertexArray(group.VAO);
                 glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
@@ -621,13 +750,25 @@ int main()
         if (!roof_materialGroups.empty())
         {
             glm::mat4 roofModel = glm::mat4(1.0f);
-            roofModel = glm::scale(roofModel, glm::vec3(0.15f));                 // Adjust scale
+            roofModel = glm::scale(roofModel, glm::vec3(0.15f));          // Adjust scale
             roofModel = glm::translate(roofModel, glm::vec3(0.0f, 10.0f, 0.0f)); // Adjust position
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(roofModel));
             for (const auto &group : roof_materialGroups)
             {
-                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                if (group.hasTexture)
+                {
+                    glUniform1i(hasTextureLoc, 1); // Tell shader to use texture
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, group.textureID);
+                    GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
+                    glUniform1i(textureSamplerLoc, 0); // Set to texture unit 0
+                }
+                else
+                {
+                    glUniform1i(hasTextureLoc, 0); // Tell shader to use color
+                    GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                }
                 glBindVertexArray(group.VAO);
                 glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
@@ -636,15 +777,27 @@ int main()
         // --- Render NorthWall ---
         if (!northwall_materialGroups.empty())
         {
-            glm::mat4 northWallModel = glm::mat4(1.0f);                    // Identity, or adjust if you want transforms
+            glm::mat4 northWallModel = glm::mat4(1.0f);            // Identity, or adjust if you want transforms
             northWallModel = glm::scale(northWallModel, glm::vec3(0.15f)); // Shrink it if it's too big
             northWallModel = glm::translate(northWallModel, glm::vec3(0.5f, 0.0f, 0.0f));
             northWallModel = glm::rotate(northWallModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(northWallModel));
             for (const auto &group : northwall_materialGroups)
             {
-                GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                if (group.hasTexture)
+                {
+                    glUniform1i(hasTextureLoc, 1); // Tell shader to use texture
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, group.textureID);
+                    GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
+                    glUniform1i(textureSamplerLoc, 0); // Set to texture unit 0
+                }
+                else
+                {
+                    glUniform1i(hasTextureLoc, 0); // Tell shader to use color
+                    GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                }
                 glBindVertexArray(group.VAO);
                 glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
             }
@@ -662,7 +815,7 @@ int main()
 
         // --- Manual Time-of-Day Setup ---
         static float timeOfDay = 12.0f; // Start at midday
-        const float deltaTime = 0.1f;   // Speed of time change per frame
+        const float deltaTime = 0.1f;    // Speed of time change per frame
 
         // User input to adjust time (left/right arrows)
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
@@ -715,6 +868,9 @@ int main()
         {
             glDeleteVertexArrays(1, &group.VAO);
             glDeleteBuffers(1, &group.VBO);
+            if (group.hasTexture) {
+                glDeleteTextures(1, &group.textureID);
+            }
         }
     }
     // Cleanup for room objects
@@ -722,26 +878,41 @@ int main()
     {
         glDeleteVertexArrays(1, &group.VAO);
         glDeleteBuffers(1, &group.VBO);
+        if (group.hasTexture) {
+            glDeleteTextures(1, &group.textureID);
+        }
     }
     for (const auto &group : carpet1_materialGroups)
     {
         glDeleteVertexArrays(1, &group.VAO);
         glDeleteBuffers(1, &group.VBO);
+        if (group.hasTexture) {
+            glDeleteTextures(1, &group.textureID);
+        }
     }
     for (const auto &group : carpet2_materialGroups)
     {
         glDeleteVertexArrays(1, &group.VAO);
         glDeleteBuffers(1, &group.VBO);
+        if (group.hasTexture) {
+            glDeleteTextures(1, &group.textureID);
+        }
     }
     for (const auto &group : roof_materialGroups)
     {
         glDeleteVertexArrays(1, &group.VAO);
         glDeleteBuffers(1, &group.VBO);
+        if (group.hasTexture) {
+            glDeleteTextures(1, &group.textureID);
+        }
     }
     for (const auto &group : northwall_materialGroups)
     {
         glDeleteVertexArrays(1, &group.VAO);
         glDeleteBuffers(1, &group.VBO);
+        if (group.hasTexture) {
+            glDeleteTextures(1, &group.textureID);
+        }
     }
 
     glfwDestroyWindow(window);
