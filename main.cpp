@@ -1203,11 +1203,11 @@ int main()
         light.upload(shaderProgram, lightColor);
 
         // ----- Mini-map rendering -----
-        int miniWidth = 150;
-        int miniHeight = 300;
+        int miniWidth = 250;
+        int miniHeight = 600;
 
         glViewport(0, 0, width, height);
-        glViewport(width - miniWidth, height - miniHeight - 5, miniWidth, miniHeight);
+        glViewport(width - miniWidth + 50, height - miniHeight + 5, miniWidth, miniHeight);
 
         // Fixed top-down camera position for mini-map
         glm::vec3 topDownCam = glm::vec3(0.0f, 30.0f, 0.0f);
