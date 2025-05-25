@@ -1,42 +1,65 @@
 #version 330 core
 
-in vec3 FragPos;
-in vec3 Normal;
+out vec4 FragColor;
 
-uniform vec3 lightDir;
+in vec3 FragPos;    
+in vec3 Normal;     
+in vec2 TexCoord;   
+
+uniform vec4 objectColor;    
+uniform sampler2D textureSampler; 
+uniform int hasTexture;      
+
+uniform vec3 lightPos;       
 uniform vec3 lightColor;
-uniform vec4 objectColor;
+
+uniform vec3 lightDir;       // For directional light (night vision effect)
+uniform vec3 viewPos;        
 
 uniform int mode; // 0 = normal, 1 = night vision, 2 = grayscale, 3 = inverted
 
-out vec4 FragColor;
+void main()
+{
+    // --- Lighting calculations ---
+    float ambientStrength = 0.6;
+    vec3 ambient = ambientStrength * lightColor;
 
-void main() {
     vec3 norm = normalize(Normal);
-    vec3 lightDirection = normalize(-lightDir);
+    vec3 directionalLight = normalize(-lightDir); // For post-processing (night vision)
+    vec3 lightDirection = normalize(lightPos - FragPos); // For point light (main shading)
 
     float diff = max(dot(norm, lightDirection), 0.0);
-    vec3 diffuse = diff * lightColor;
-    vec3 ambient = 0.6 * lightColor;
+    vec3 diffuse = diff * lightColor * 0.4;
 
-    vec3 lighting = (ambient + diffuse) * objectColor.rgb;
-    vec4 color = vec4(lighting, objectColor.a);
+    vec3 lighting = min(ambient + diffuse, vec3(1.0));
+    
+    // --- Base color calculation ---
+    vec4 baseColor;
+    if (hasTexture == 1) {
+        vec4 texColor = texture(textureSampler, TexCoord);
+        baseColor = vec4(texColor.rgb + lighting * 0.05, texColor.a); // Slight lighting boost
+    } else {
+        baseColor = vec4(objectColor.rgb * lighting, objectColor.a);
+    }
 
-    // Night vision
+    // --- Post-processing effects ---
+    vec4 finalColor = baseColor;
+
     if (mode == 1) {
-        float intensity = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722)); 
+        // Night vision
+        float intensity = dot(baseColor.rgb, vec3(0.2126, 0.7152, 0.0722)); 
         vec3 nightVision = vec3(0.1, 1.0, 0.1) * intensity * 1.5;
-        color = vec4(nightVision, color.a);
+        finalColor = vec4(nightVision, baseColor.a);
     }
-    // Grey scale
     else if (mode == 2) {
-        float grey = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-        color = vec4(vec3(grey), color.a);
-    } 
-    // Inverted
+        // Grayscale
+        float grey = dot(baseColor.rgb, vec3(0.299, 0.587, 0.114));
+        finalColor = vec4(vec3(grey), baseColor.a);
+    }
     else if (mode == 3) {
-        color = vec4(vec3(1.0) - color.rgb, color.a);
+        // Inverted
+        finalColor = vec4(vec3(1.0) - baseColor.rgb, baseColor.a);
     }
 
-    FragColor = color;
+    FragColor = finalColor;
 }
