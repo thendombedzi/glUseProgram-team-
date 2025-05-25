@@ -5,10 +5,9 @@
 
 class LightingManager {
 public:
-    static void upload(GLuint shaderProgram);
+    static void upload(GLuint shaderProgram, glm::vec3 FinalColor);
 
     static glm::vec3 lightDirection;
-    static glm::vec3 lightColor;
 };
 
 #endif

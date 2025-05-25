@@ -277,24 +277,53 @@ struct Furniture {
         }
         
         for (const auto& group : materialGroups) {
+            // Determine whether the group is translucent
+            bool isTranslucent = group.alpha < 1.0f;
+
+            if (isTranslucent)
+            {
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glDepthMask(GL_FALSE); // Prevent depth writing for translucent objects
+            }
+
             if (group.hasTexture)
             {
                 glUniform1i(hasTextureLoc, 1); // Tell shader to use texture
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, group.textureID);
+
                 GLint textureSamplerLoc = glGetUniformLocation(shaderProgram, "textureSampler");
-                glUniform1i(textureSamplerLoc, 0); // Set to texture unit 0
+                glUniform1i(textureSamplerLoc, 0); // Texture unit 0
             }
             else
             {
                 glUniform1i(hasTextureLoc, 0); // Tell shader to use color
+
                 GLuint colorLoc = glGetUniformLocation(shaderProgram, "objectColor");
-                glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                if (isTranslucent)
+                {
+                    // Optional: use a custom tint for glassy look
+                    glm::vec3 glassTint(0.3f, 0.6f, 0.9f);
+                    float visibleAlpha = 0.4f;
+                    glUniform4f(colorLoc, glassTint.r, glassTint.g, glassTint.b, visibleAlpha);
+                }
+                else
+                {
+                    glUniform4f(colorLoc, group.color.r, group.color.g, group.color.b, 1.0f);
+                }
             }
 
             glBindVertexArray(group.VAO);
             glDrawArrays(GL_TRIANGLES, 0, group.vertexCount);
+
+            if (isTranslucent)
+            {
+                glDepthMask(GL_TRUE);
+                glDisable(GL_BLEND);
+            }
         }
+
     }
 };
 
@@ -1043,14 +1072,12 @@ int main() {
     // Load North Wall
     std::vector<MaterialGroup> northwall_materialGroups = loadObjModel("Objects/north_south_wall.obj", reader_config);
 
-    // Load WestWall
+    // Load West Wall
     std::vector<MaterialGroup> westwall_materialGroups = loadObjModel("Objects/glassPanel.obj", reader_config);
 
     // East wall (named west)
     Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
         
-    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide and capture mouse cursor
-    // glfwSetCursorPosCallback(window, mouse_callback); // Register the callback function
     LightingManager light;
 
     // Load Drone 
@@ -1142,7 +1169,6 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shaderProgram);
-        light.upload(shaderProgram);
 
         // Set up matrices uniforms
         GLuint modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -1177,6 +1203,48 @@ int main() {
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(droneModel));
         renderDrone(drone_materialGroups, modelLoc);
+
+        static int timeSlot = 2; // Default to Midday
+
+        // Handle user input (keys 1–4)
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+            timeSlot = 1;
+        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+            timeSlot = 2;
+        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+            timeSlot = 3;
+        if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+            timeSlot = 4;
+
+        // Determine light color and intensity
+        glm::vec3 sunColor;
+        float intensity;
+
+        switch (timeSlot)
+        {
+        case 1: // Morning
+            sunColor = glm::vec3(1.0f, 0.65f, 0.4f);
+            intensity = 0.5f;
+            break;
+        case 2: // Midday
+            sunColor = glm::vec3(1.0f, 0.95f, 0.85f);
+            intensity = 1.0f;
+            break;
+        case 3: // Evening
+            sunColor = glm::vec3(1.0f, 0.5f, 0.25f);
+            intensity = 0.4f;
+            break;
+        case 4: // Night
+        default:
+            sunColor = glm::vec3(0.1f, 0.1f, 0.3f);
+            intensity = 0.15f;
+            break;
+        }
+
+        // Final light color to send to shader
+        glm::vec3 lightColor = sunColor * intensity;
+
+        light.upload(shaderProgram, lightColor);
 
         // ----- Mini-map rendering -----
         int miniWidth = 150;

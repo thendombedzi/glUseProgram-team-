@@ -6,15 +6,15 @@ in vec3 FragPos;
 in vec3 Normal;     
 in vec2 TexCoord;   
 
-uniform vec4 objectColor;    
-uniform sampler2D textureSampler; 
-uniform int hasTexture;      
+uniform vec4 objectColor;            // Base RGBA object color
+uniform sampler2D textureSampler;    
+uniform int hasTexture;              // 0 = solid color, 1 = texture
 
-uniform vec3 lightPos;       
+uniform vec3 lightPos;               
 uniform vec3 lightColor;
+uniform vec3 lightDir;               // Used for night vision post-process
 
-uniform vec3 lightDir;       // For directional light (night vision effect)
-uniform vec3 viewPos;        
+uniform float alpha;                 // Alpha override from material (e.g., MTL)
 
 uniform int mode; // 0 = normal, 1 = night vision, 2 = grayscale, 3 = inverted
 
@@ -25,22 +25,23 @@ void main()
     vec3 ambient = ambientStrength * lightColor;
 
     vec3 norm = normalize(Normal);
-    vec3 directionalLight = normalize(-lightDir); // For post-processing (night vision)
-    vec3 lightDirection = normalize(lightPos - FragPos); // For point light (main shading)
-
+    vec3 lightDirection = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDirection), 0.0);
     vec3 diffuse = diff * lightColor * 0.4;
 
     vec3 lighting = min(ambient + diffuse, vec3(1.0));
-    
-    // --- Base color calculation ---
+
+    // --- Base color from texture or objectColor ---
     vec4 baseColor;
     if (hasTexture == 1) {
         vec4 texColor = texture(textureSampler, TexCoord);
-        baseColor = vec4(texColor.rgb + lighting * 0.05, texColor.a); // Slight lighting boost
+        baseColor = vec4(texColor.rgb + lighting * 0.05, texColor.a); // Boost lighting slightly
     } else {
         baseColor = vec4(objectColor.rgb * lighting, objectColor.a);
     }
+
+    // Override alpha if provided (assumes 0.0–1.0 valid input)
+    baseColor.a = alpha;
 
     // --- Post-processing effects ---
     vec4 finalColor = baseColor;
