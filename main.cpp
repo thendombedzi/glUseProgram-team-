@@ -18,6 +18,7 @@
 #include "tiny_obj_loader.h"
 #include "Objects/EastWall/WindowWall.hpp"
 #include "Objects/WestWall/Wall.hpp"
+#include "Objects/WestWall/Doors.hpp"
 #include "lightingManager.hpp"
 
 using namespace glm;
@@ -181,7 +182,7 @@ std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyo
                     vertex.ny = attrib.normals[3 * idx.normal_index + 1];
                     vertex.nz = attrib.normals[3 * idx.normal_index + 2];
                 } else {
-                    vertex.nx = 0.0f; vertex.ny = 0.0f; vertex.nz = 1.0f; // fallback
+                    vertex.nx = 0.0f; vertex.ny = 0.0f; vertex.nz = 1.0f; 
                 }
 
                 // Get texture coordinates
@@ -223,9 +224,9 @@ std::vector<MaterialGroup> loadObjModel(const std::string& filename, const tinyo
             glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(InterleavedVertex), (void *)(6 * sizeof(float)));
             glEnableVertexAttribArray(2);
 
-            // Color from material or default
-            glm::vec3 color(0.8f); // default
-            GLuint textureID = 0;  // default to no texture
+           
+            glm::vec3 color(0.8f);
+            GLuint textureID = 0;  
             bool hasTexture = false;
 
             // Extract alpha from material
@@ -392,17 +393,15 @@ void renderCarpet(vector<MaterialGroup> carpet0_materialGroups, vector<MaterialG
 void renderRoof(vector<MaterialGroup> roof_materialGroups, GLuint modelLoc) {
     if (!roof_materialGroups.empty()) {
 
-        // Define duplication parameters
-        int numDuplicates = 4; // Number of roof panels you want
+        int numDuplicates = 4; 
         float zOffset = 15.0f; 
 
         for (int i = 0; i < numDuplicates; ++i) {
             glm::mat4 roofModel = glm::mat4(1.0f);
 
-            // Apply base transformations (from your original code)
-            roofModel = glm::scale(roofModel, glm::vec3(0.8f)); // Adjust scale
-            roofModel = glm::translate(roofModel, glm::vec3(-2.5f, 25.0f, 25.0f)); // Adjust base position
-            roofModel = glm::rotate(roofModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
+            roofModel = glm::scale(roofModel, glm::vec3(0.8f)); 
+            roofModel = glm::translate(roofModel, glm::vec3(-2.5f, 24.5f, 25.0f)); 
+            roofModel = glm::rotate(roofModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
 
             // Apply duplication offset
             // For each duplicate, translate it further along the X-axis
@@ -471,10 +470,10 @@ void renderWEWalls(float groundLevel, vector<MaterialGroup> westwall_materialGro
         for (int i = 0; i < rows; ++i) {
             
             glm::mat4 westWallModel = glm::mat4(1.0f);
-            westWallModel = glm::scale(westWallModel, glm::vec3(1.0f)); // Adjust scale
-            westWallModel = glm::rotate(westWallModel, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
+            westWallModel = glm::scale(westWallModel, glm::vec3(1.0f)); 
+            westWallModel = glm::rotate(westWallModel, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
 
-            westWallModel = glm::translate(westWallModel, glm::vec3(-22.5f, groundLevel+0.5 +(i * yOffset) ,-5.0f ));
+            westWallModel = glm::translate(westWallModel, glm::vec3(-22.5f, groundLevel+0.5 +(i * yOffset) ,-6.5f ));
 
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(westWallModel));
             for (const auto& group : westwall_materialGroups) {
@@ -486,11 +485,11 @@ void renderWEWalls(float groundLevel, vector<MaterialGroup> westwall_materialGro
 
             for(int j = 0; j < cols; j++){
                 glm::mat4 westWallModel = glm::mat4(1.0f);
-                westWallModel = glm::scale(westWallModel, glm::vec3(1.0f)); // Adjust scale
-                westWallModel = glm::translate(westWallModel, glm::vec3(0.0f, 0.0f, 0.0f)); // Adjust position
-                westWallModel = glm::rotate(westWallModel, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
+                westWallModel = glm::scale(westWallModel, glm::vec3(1.0f)); 
+                westWallModel = glm::translate(westWallModel, glm::vec3(0.0f, 0.0f, 0.0f)); 
+                westWallModel = glm::rotate(westWallModel, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
 
-                westWallModel = glm::translate(westWallModel, glm::vec3(-22.5f, groundLevel+0.5 + (i * yOffset),-5.0f +(j * xOffset)));
+                westWallModel = glm::translate(westWallModel, glm::vec3(-22.5f, groundLevel+0.5 + (i * yOffset),-6.5f +(j * xOffset)));
 
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(westWallModel));
                 for (const auto& group : westwall_materialGroups) {
@@ -516,7 +515,7 @@ void renderWEWalls(float groundLevel, vector<MaterialGroup> westwall_materialGro
                 eastWallModel = glm::scale(eastWallModel, glm::vec3(1.0f)); // Adjust scale
                 eastWallModel = glm::rotate(eastWallModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
 
-                eastWallModel = glm::translate(eastWallModel, glm::vec3(-19.0f, 10.0f +(i * yOffset) ,-9.0f ));
+                eastWallModel = glm::translate(eastWallModel, glm::vec3(-17.5f, 10.0f +(i * yOffset) ,-9.5f ));
 
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(eastWallModel));
                 for (const auto& group : westwall_materialGroups) {
@@ -532,7 +531,7 @@ void renderWEWalls(float groundLevel, vector<MaterialGroup> westwall_materialGro
                     eastWallModel = glm::translate(eastWallModel, glm::vec3(0.0f, 0.0f, 0.0f)); // Adjust position
                     eastWallModel = glm::rotate(eastWallModel, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
 
-                    eastWallModel = glm::translate(eastWallModel, glm::vec3(-19.0f, 10.0f + (i * yOffset), -9.0f+(j * xOffset)));
+                    eastWallModel = glm::translate(eastWallModel, glm::vec3(-17.5f, 10.0f + (i * yOffset), -9.5f+(j * xOffset)));
 
                     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(eastWallModel));
                     for (const auto& group : westwall_materialGroups) {
@@ -559,7 +558,7 @@ void renderWEWalls(float groundLevel, vector<MaterialGroup> westwall_materialGro
                 eastWallModel2 = glm::scale(eastWallModel2, glm::vec3(1.0f)); // Adjust scale
                 eastWallModel2 = glm::rotate(eastWallModel2, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
 
-                eastWallModel2 = glm::translate(eastWallModel2, glm::vec3(-19.0f, 10.0f +(i * yOffset),2.5f ));
+                eastWallModel2 = glm::translate(eastWallModel2, glm::vec3(-17.5f, 10.0f +(i * yOffset),3.0f ));
 
                 glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(eastWallModel2));
                 for (const auto& group : westwall_materialGroups) {
@@ -575,7 +574,7 @@ void renderWEWalls(float groundLevel, vector<MaterialGroup> westwall_materialGro
                     eastWallModel2 = glm::translate(eastWallModel2, glm::vec3(0.0f, 0.0f, 0.0f)); // Adjust position
                     eastWallModel2 = glm::rotate(eastWallModel2, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate to face the right direction
 
-                    eastWallModel2 = glm::translate(eastWallModel2, glm::vec3(-19.0f, 10.0f + (i * yOffset), 2.5f+(j * xOffset)));
+                    eastWallModel2 = glm::translate(eastWallModel2, glm::vec3(-17.5f, 10.0f + (i * yOffset), 3.0f+(j * xOffset)));
 
                     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(eastWallModel2));
                     for (const auto& group : westwall_materialGroups) {
@@ -703,7 +702,6 @@ int main() {
     }
     
 
-    // 13-14. Loading Dividers (2 instances)
     auto divider_materialGroups = loadObjModel("objects/divider.obj", reader_config);
     if (!divider_materialGroups.empty()) {
 
@@ -737,7 +735,6 @@ int main() {
         });
     }
     
-    // 15-16. Loading CubicCouch (2 instances)
     auto cubicCouch_materialGroups = loadObjModel("objects/cubicCouch.obj", reader_config);
     if (!cubicCouch_materialGroups.empty()) {
         furnitureCollection.push_back({
@@ -755,7 +752,6 @@ int main() {
         });
     }
     
-    // 17-20. Loading Small Tables (4 instances)
     auto smallTable_materialGroups = loadObjModel("objects/smallTable.obj", reader_config);
     if (!smallTable_materialGroups.empty()) {
         // Small Table 1
@@ -774,7 +770,6 @@ int main() {
         });
     }
        
-    // 21-24. Loading Tall Tables (4 instances - 2 pairs that are close to each other)
     auto tallTable_materialGroups = loadObjModel("objects/tallTable.obj", reader_config);
     if (!tallTable_materialGroups.empty()) {
         furnitureCollection.push_back({
@@ -793,6 +788,13 @@ int main() {
         });
 
         furnitureCollection.push_back({
+            tallTable_materialGroups,
+            glm::vec3(-1.8f, groundLevel, 12.0f),  
+            glm::vec3(0.0f, 0.0f, 0.0f),         
+            glm::vec3(0.7f)                      
+        });
+
+        furnitureCollection.push_back({
         tallTable_materialGroups,
         glm::vec3(-2.5f, groundLevel, -1.0f),  
         glm::vec3(0.0f, 0.0f, 0.0f),         
@@ -801,8 +803,8 @@ int main() {
 
         furnitureCollection.push_back({
         tallTable_materialGroups,
-        glm::vec3(-2.5f, groundLevel, 2.0f),  // Moved further south (positive Z), spaced
-        glm::vec3(0.0f, 0.0f, 0.0f),         // Rotation
+        glm::vec3(-2.5f, groundLevel, 2.0f),  
+        glm::vec3(0.0f, 0.0f, 0.0f),         
         glm::vec3(0.7f)          
     });
     }
@@ -857,7 +859,7 @@ int main() {
         // Chair 1
         furnitureCollection.push_back({
            comfortableChair_materialGroups,
-            glm::vec3(-6.0f, groundLevel, -12.0f), 
+            glm::vec3(-3.0f, groundLevel, -12.0f), 
             glm::vec3(0.0f, 180.0f, 0.0f),        
             glm::vec3(0.7f)                      
         });
@@ -865,27 +867,10 @@ int main() {
         // Chair 2
         furnitureCollection.push_back({
             comfortableChair_materialGroups,
-            glm::vec3(-6.0f, groundLevel, -12.0f),  // Position closer to table, facing table
-            glm::vec3(0.0f, 0.0f, 0.0f),          // Rotate to face south (towards table)
-            glm::vec3(0.7f)                      // Scale
+            glm::vec3(-7.0f, groundLevel, -14.0f), 
+            glm::vec3(0.0f, 0.0f, 0.0f),         
+            glm::vec3(0.7f)                      
         });
-        
-    //     // Near Short Table 2
-    //     // Chair 3
-    //     furnitureCollection.push_back({
-    //          comfortableChair_materialGroups,
-    //         glm::vec3(7.5f, groundLevel, -20.0f), // Position closer to table, facing table
-    //         glm::vec3(0.0f, 180.0f, 0.0f),        // Rotate to face north (towards table)
-    //         glm::vec3(1.0f)                      // Scale
-    //     });
-        
-    //     // Chair 4
-    //    furnitureCollection.push_back({
-    //         comfortableChair_materialGroups,
-    //         glm::vec3(0.0f, groundLevel, -20.0f),  // Position closer to table, facing table
-    //         glm::vec3(0.0f, 0.0f, 0.0f),          // Rotate to face south (towards table)
-    //         glm::vec3(1.0f)                      // Scale
-    //     });
 
     auto bigTable_materialGroups = loadObjModel("objects/BigTable.obj", reader_config);
     auto blue_materialGroups = loadObjModel("objects/blue.obj", reader_config);
@@ -957,7 +942,7 @@ int main() {
             //Furthest
             furnitureCollection.push_back({
                 blue_materialGroups,
-                glm::vec3(bigTableX - 0.0f, groundLevel, bigTableZ), 
+                glm::vec3(bigTableX - 0.0f, groundLevel, bigTableZ-1.5f), 
                 glm::vec3(0.0f, 0.0f, 0.0f),         
                 glm::vec3(0.7f)                     
             });
@@ -1000,7 +985,14 @@ int main() {
 
             furnitureCollection.push_back({
                 yellow_materialGroups,
-                glm::vec3(bigTableX +3.0f, groundLevel, bigTableZ + 0.0f), 
+                glm::vec3(bigTableX-3.0f, groundLevel, 6.0f),  
+                glm::vec3(0.0f, 0.0f, 0.0f),        
+                glm::vec3(0.7f)                      
+            });
+
+            furnitureCollection.push_back({
+                yellow_materialGroups,
+                glm::vec3(bigTableX +3.0f, groundLevel, bigTableZ + 2.0f), 
                 glm::vec3(0.0f, 0.0f, 0.0f),         
                 glm::vec3(0.7f)                        
             });
@@ -1076,7 +1068,9 @@ int main() {
     std::vector<MaterialGroup> westwall_materialGroups = loadObjModel("Objects/glassPanel.obj", reader_config);
 
     // East wall (named west)
-    Wall westWall(4.0f, 10.0f, 0.2f, 5, 8);
+    Wall westWall(4.2f, 9.0f, 0.2f, -0.2f);
+    Doors door1;
+    door1.createDoor(0.0f, groundLevel, 5.0f, -0.2f);
         
     LightingManager light;
 
@@ -1197,7 +1191,7 @@ int main() {
             glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),  // Column 0 (X-axis basis vector)
             glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),  // Column 1 (Y-axis basis vector)
             glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),  // Column 2 (Z-axis basis vector)
-            glm::vec4(10.0f, -10.0f, 20.0f, 1.0f) // Column 3 (Translation vector)
+            glm::vec4(-2.2f, 12.0f, 17.5f, 1.0f) // Column 3 (Translation vector)
         );
         westWall.setTransform(translationMatrix);
 

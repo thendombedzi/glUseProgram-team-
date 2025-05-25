@@ -3,12 +3,13 @@
 #include "RectangularPrism.hpp"
 #include <glm/gtc/type_ptr.hpp>
 #include "../Vertex.hpp"
+#include <iostream>
 
-Wall::Wall(float width, float height, float depth, int grooveCols, int grooveRows) {
+Wall::Wall(float width, float height, float depth, float tileThickness) {
 	RectangularPrism rectPrism;
     auto base = rectPrism.createRectangularPrism(width, height, depth);
     Grids grids;
-    auto grooves = grids.createGrooveTile(width, height, grooveCols, grooveRows, 0.05f);
+    auto grooves = grids.createGrooveTileGrid(width, height, tileThickness);
 
     combinedVertices.insert(combinedVertices.end(), base.begin(), base.end());
     combinedVertices.insert(combinedVertices.end(), grooves.begin(), grooves.end());
@@ -52,7 +53,6 @@ void Wall::draw(const glm::mat4& view, const glm::mat4& projection, GLuint shade
     glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
-    // Dark wall color, adjust as needed
     glUniform4f(glGetUniformLocation(shader, "objectColor"), 0.2f, 0.2f, 0.2f, 1.0f);
 
     glBindVertexArray(VAO);

@@ -8,8 +8,8 @@
 #include "../Vertex.hpp"
 
 std::vector<Vertex> RectangularPrism::createRectangularPrism(float width, float height, float depth) {
-    float w = width / 2.0f;
-    float h = height / 2.0f;
+    float w = width;
+    float h = height;
     float d = depth / 2.0f;
 
     std::vector<Vertex> vertices;
